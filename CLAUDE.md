@@ -32,9 +32,11 @@ Two equivalent routes; prefer the CLI (`higgsfield`) because it uploads local fi
 Model choices (verify with `higgsfield model get` — names change):
 - Start frame with the owner's face: `text2image_soul_v2 --soul-id <HIGGSFIELD_SOUL_ID> --aspect_ratio 9:16`
   (fallback `soul_cinematic`). B-roll start frames: `nano_banana_2` or `gpt_image_2_5`, 9:16.
-- Talking clip (lip-sync to our wav): `seedance_2_5` with `--start-image <frame> --audio <wav> --aspect_ratio 9:16
-  --duration <clip_duration_sec> --generate_audio false`. If `seedance_2_5` rejects audio, use `seedance_2_0`
-  (same flags). Never let the model invent speech: the prompt must say "speaks the supplied audio, lips in sync".
+- Talking clip (lip-sync to our wav), verified against CLI 1.2.2: `higgsfield generate create seedance_2_5
+  --mode omni_reference --start-image <frame.png> --audio <scene.wav> --prompt "..." --aspect_ratio 9:16
+  --duration <5|10> --resolution 1080p --generate_audio false --wait`. (`start_image` is only accepted in
+  `omni_reference` mode; `--audio` is the alias of `--audio-references`.) If it rejects audio, use `seedance_2_0`
+  (same flags). B-roll clips: same model, `--mode omni_reference --start-image` without audio, or `--mode t2v`. Never let the model invent speech: the prompt must say "speaks the supplied audio, lips in sync".
 - B-roll / animation clip: `gemini_omni` or `kling3_0 --start-image <frame> --sound off`, 9:16, 5 or 10 s.
 - Soul ID training (one-time): `higgsfield soul-id create --name me --soul-2 --image <photo>...` with every
   photo in `assets/me/photos` (5-20, varied angles), then `higgsfield soul-id wait <id>` and write the id to

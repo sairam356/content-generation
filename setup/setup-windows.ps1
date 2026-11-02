@@ -41,7 +41,6 @@ RefreshPath
 
 Write-Host "`n[4/6] Higgsfield MCP server for Claude Code (user scope) + skills" -ForegroundColor Yellow
 try { claude mcp add --transport http --scope user higgsfield https://mcp.higgsfield.ai/mcp 2>$null | Out-Null } catch { }
-try { npx -y skills add higgsfield-ai/skills -y 2>$null | Out-Null } catch { Write-Host "  (skills install skipped - optional)" }
 
 Write-Host "`n[5/6] Config" -ForegroundColor Yellow
 if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env"; Write-Host "  created .env - fill GEMINI_API_KEY and ELEVENLABS_API_KEY" }
