@@ -119,7 +119,8 @@ Rules:
   scene duration_sec = that beat's length rounded to 5 or 10 (video models render 5s/10s clips). Keep the
   total close to the reference duration.
 - narration_te: faithful natural spoken Telugu of exactly what is said in that beat (same facts, same numbers,
-  same order, same jokes). Telugu script, not transliteration; keep English technical words in English letters
+  same order, same jokes). HARD word budget: 5s scene <= 12 Telugu words, 10s scene <= 24 words (Telugu is
+  spoken at ~2.3 words/s). If a beat says more than fits, split it into two scenes rather than compressing. Telugu script, not transliteration; keep English technical words in English letters
   the way Telugu speakers say them. Do not add, drop or re-explain content.
 - type: "presenter" when the reference shows the presenter talking to camera; "presenter_overlay" when the
   presenter is on screen with a graphic/footage behind or beside him; "broll" when no presenter is visible.
@@ -271,7 +272,6 @@ def run(url: str, name: str | None = None, target_sec: int | None = None, mode: 
     print(f"[analyze] watching {url} with {model} ...")
     analysis = analyze_video(url, model)
     print(f"[analyze] concept: {analysis['core_concept']}")
-    print("[analyze] writing Telugu script ...")
     print(f"[analyze] writing Telugu script ({mode}) ...")
     script = write_telugu_script(analysis, model, target_sec, mode)
 
