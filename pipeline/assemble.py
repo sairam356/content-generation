@@ -140,7 +140,7 @@ def assemble(project: Path, music: str | None = None, no_subs: bool = False) -> 
         srt = write_srt(items, durations, build / "captions.srt")
         font = config.env("SUBTITLE_FONT", "Nirmala UI")
         style = (f"FontName={font},FontSize=15,Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-                 "BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=330")
+                 "BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=70")
         srt_arg = srt.resolve().as_posix().replace(":", "\\:")
         filters.append(f"[0:v]subtitles='{srt_arg}':force_style='{style}'[v]")
     if filters:
