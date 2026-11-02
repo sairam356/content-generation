@@ -29,6 +29,14 @@ Two equivalent routes; prefer the CLI (`higgsfield`) because it uploads local fi
   and tell the owner the total estimate for all scenes before continuing.
 - MCP (`.mcp.json`, server `higgsfield`): same tools, used when the CLI is missing. Authenticate with `/mcp`.
 
+Credit guide (measured with `higgsfield generate cost`, CLI 1.2.2; re-check, prices change):
+- seedance_2_5 presenter clip 5s 720p = 35 credits; 10s 1080p = 160 credits -> default to 720p and 5s scenes
+  for presenter shots; use 10s only when the brief needs an unbroken take.
+- B-roll: seedance_2_0_mini 5s = 5 credits (default), kling3_0_turbo 5s = 7.5, veo3_1_lite = 12.
+- Soul start frame (text2image_soul_v2) = 0.12 credits. Soul ID training: check cost before running.
+- A typical 45s Short (3 presenter x 5s @720p + 4-5 b-roll) is ~130-150 credits. Always print the total and
+  stop for approval before the first paid job.
+
 Model choices (verify with `higgsfield model get` — names change):
 - Start frame with the owner's face: `text2image_soul_v2 --soul-id <HIGGSFIELD_SOUL_ID> --aspect_ratio 9:16`
   (fallback `soul_cinematic`). B-roll start frames: `nano_banana_2` or `gpt_image_2_5`, 9:16.
