@@ -113,6 +113,11 @@ setup/                 setup-windows.ps1, register-daily-task.ps1
 run.ps1                end-to-end runner
 ```
 
+## Offline check
+
+`python smoke_test.py` — no keys or credits: mocked Gemini brief, synthetic audio through the mastering chain,
+synthetic clips assembled to `projects\smoke-test\final.mp4` with Telugu captions.
+
 ## Notes
 
 - Only clone your own face and voice. Keep the facts in `analysis.facts_to_verify` honest before publishing.
