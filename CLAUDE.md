@@ -13,6 +13,12 @@ The owner's face photos live in `assets/me/photos/`. The owner's Soul ID (Higgsf
 `HIGGSFIELD_SOUL_ID` in `.env` once trained. Everything runs on the owner's Windows PC: use
 PowerShell-compatible commands (`python`, not `python3`; paths with `\` are fine; no `sudo`).
 
+## Replicate mode (default)
+
+`brief.json.mode == "replicate"` means the Short must look like the reference: reproduce each scene's framing,
+background, colours, props and camera move exactly as `visual_prompt` describes; only the presenter is the
+owner (Soul ID) and the audio is his Telugu narration. Do not restyle or "improve" the look.
+
 ## Higgsfield access
 
 Two equivalent routes; prefer the CLI (`higgsfield`) because it uploads local files and downloads results:

@@ -13,6 +13,7 @@ def main(argv=None):
     a.add_argument("url")
     a.add_argument("--name", help="project folder name (default: date-title-videoid)")
     a.add_argument("--target-sec", type=int, help="narration budget in seconds (default TARGET_DURATION_SEC)")
+    a.add_argument("--mode", choices=["replicate", "remix"], help="replicate = same transcript/shots/timing with your face+voice (default); remix = original re-explanation")
 
     v = sub.add_parser("voice", help="ElevenLabs voice management")
     vs = v.add_subparsers(dest="vcmd", required=True)
@@ -53,7 +54,7 @@ def main(argv=None):
 
     if args.cmd == "analyze":
         from . import analyze
-        out = analyze.run(args.url, args.name, args.target_sec)
+        out = analyze.run(args.url, args.name, args.target_sec, args.mode)
         print(out)
     elif args.cmd == "voice":
         from . import voice

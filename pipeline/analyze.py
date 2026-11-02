@@ -107,6 +107,36 @@ an English translation. Describe the editing: pacing, camera, animation / motion
 on-screen text, props, diagrams. Explain the concept being taught and why the short holds attention.
 List any factual claims that should be double-checked before re-using them."""
 
+REPLICATE_PROMPT = """You are a Telugu YouTube Shorts script adapter and shot-list director.
+
+Below is a frame-accurate analysis of a reference Short that performed very well. Produce a Telugu REPLICA:
+SAME idea, SAME transcript content and order, SAME structure and timing, SAME shot framing, background,
+colours, props, pacing and quality. The ONLY changes: the presenter is replaced by the channel owner
+(his AI avatar + his cloned voice) and everything spoken is in Telugu.
+
+Rules:
+- Scenes: one scene per beat of analysis.structure (merge beats shorter than 3s with their neighbour). Each
+  scene duration_sec = that beat's length rounded to 5 or 10 (video models render 5s/10s clips). Keep the
+  total close to the reference duration.
+- narration_te: faithful natural spoken Telugu of exactly what is said in that beat (same facts, same numbers,
+  same order, same jokes). Telugu script, not transliteration; keep English technical words in English letters
+  the way Telugu speakers say them. Do not add, drop or re-explain content.
+- type: "presenter" when the reference shows the presenter talking to camera; "presenter_overlay" when the
+  presenter is on screen with a graphic/footage behind or beside him; "broll" when no presenter is visible.
+- visual_prompt / image_prompt (ENGLISH, for Higgsfield Soul/Seedance): reproduce what_is_shown exactly -
+  framing, camera move, background, lighting, colour palette, props, on-screen objects, motion. For presenter
+  scenes always start with "The exact man from the reference image, " then the same framing, position,
+  outfit colour, setting and gestures as the original presenter. Vertical 9:16. Never put readable text
+  inside the generated video; captions are burned in later.
+- on_screen_text_te: Telugu version of the reference on-screen text for that beat (max 4 words) or empty.
+- title_te / caption_te / hashtags: Telugu versions of the reference title and caption; cta_te = the
+  reference's call to action in Telugu (or a short follow/comment CTA if it had none).
+- thumbnail_prompt: the reference's cover image recreated with the same man in the presenter's place.
+
+Reference analysis (JSON):
+{analysis}
+"""
+
 SCRIPT_PROMPT = """You are a Telugu YouTube Shorts scriptwriter and director.
 
 Below is an analysis of a reference Short. Write an ORIGINAL Telugu Short that teaches the SAME concept
@@ -121,13 +151,20 @@ in his own cloned voice. Write for him:
   short punchy sentences that are easy to lip-sync.
 - Total length budget: about {target} seconds of narration. Telugu speaks ~2.3 words/sec; size the
   narration_te of each scene to fit its duration_sec (5 or 10 seconds only; 5s ~ 10-12 words, 10s ~ 20-24 words).
-- Scenes: 4 to 8. Alternate "presenter" scenes (he talks to camera) with "broll" scenes (animated
-  visual that explains, no face) where the reference used visuals/animation. Use "presenter_overlay" when
-  he talks while a graphic/text overlays.
-- visual_prompt / image_prompt are in ENGLISH for the video model (Higgsfield Seedance / Soul). For presenter
-  scenes always start with: "The exact man from the reference image, " then framing, setting, lighting, and
-  the performance written beat by beat against the narration. Vertical 9:16, locked-off or slow push-in,
-  phone-video realism. Never put readable text inside the generated video; on-screen text is added later.
+- Channel formula (viral Telugu facts channels like Osm Dhruva): title is a curiosity question
+  ("🤯 ఇది ఎలా తయారు చేస్తారు?"), the FIRST sentence is that question, then a fast answer with 3-5 surprising
+  facts, then a one-line twist/tip, then CTA. Topics: how things are made, kitchen hacks, animals, body science.
+- Scenes: 4 to 8. Prefer "presenter_overlay" scenes: the presenter stands in the lower-left/right third of the
+  frame reacting to the topic (surprised, pointing, explaining with hands) while a photorealistic scene of the
+  topic fills the frame behind him. Use "broll" (topic visual only, no face) for process shots (machines,
+  close-ups, cross-sections) and "presenter" (talking head) only for the hook and the CTA.
+- visual_prompt / image_prompt are in ENGLISH for the video model (Higgsfield Seedance / Soul). For presenter and
+  presenter_overlay scenes always start with: "The exact man from the reference image, " then where he stands
+  in the frame, his expression/gesture beat by beat against the narration, then the background scene in
+  photorealistic detail (what the viewer should see about the topic), lighting, camera. Vertical 9:16, locked-off
+  or slow push-in, crisp photoreal look. Never put readable text inside the generated video; captions are added later.
+- thumbnail_prompt: the same man in the lower corner with a shocked/pointing expression, the most striking
+  topic visual behind him, bright and saturated, no text.
 - on_screen_text_te: max 4 Telugu words, the key phrase of that scene (or empty).
 - End with a CTA scene (follow / comment) in cta_te and write a Telugu caption + hashtags.
 
@@ -159,6 +196,10 @@ def _generate(client: genai.Client, model: str, contents, schema: dict, retries:
             wait = 5 * (attempt + 1)
             print(f"[gemini] attempt {attempt + 1} failed: {e}. retrying in {wait}s", file=sys.stderr)
             time.sleep(wait)
+    fallback = config.env("GEMINI_FALLBACK_MODEL", "gemini-flash-lite-latest")
+    if retries > 2 and fallback and fallback != model:
+        print(f"[gemini] {model} unavailable, falling back to {fallback}", file=sys.stderr)
+        return _generate(client, fallback, contents, schema, retries=2)
     raise SystemExit(f"[gemini] giving up: {last}")
 
 
@@ -168,9 +209,10 @@ def analyze_video(url: str, model: str) -> dict:
     return _generate(client, model, [video_part, ANALYSIS_PROMPT], ANALYSIS_SCHEMA)
 
 
-def write_telugu_script(analysis: dict, model: str, target_sec: int) -> dict:
+def write_telugu_script(analysis: dict, model: str, target_sec: int, mode: str = "replicate") -> dict:
     client = _client()
-    prompt = SCRIPT_PROMPT.format(target=target_sec, analysis=json.dumps(analysis, ensure_ascii=False, indent=1))
+    tmpl = REPLICATE_PROMPT if mode == "replicate" else SCRIPT_PROMPT
+    prompt = tmpl.format(target=target_sec, analysis=json.dumps(analysis, ensure_ascii=False, indent=1))
     script = _generate(client, model, prompt, SCRIPT_SCHEMA)
     for s in script["scenes"]:
         s["duration_sec"] = 10 if s.get("duration_sec", 5) > 5 else 5
@@ -221,15 +263,17 @@ Show me the cost estimate before the first paid generation.
 """
 
 
-def run(url: str, name: str | None = None, target_sec: int | None = None) -> Path:
+def run(url: str, name: str | None = None, target_sec: int | None = None, mode: str | None = None) -> Path:
     model = config.env("GEMINI_MODEL", "gemini-flash-latest")
     target_sec = target_sec or int(config.env("TARGET_DURATION_SEC", "45"))
+    mode = mode or config.env("SCRIPT_MODE", "replicate")
     vid = config.youtube_id(url)
     print(f"[analyze] watching {url} with {model} ...")
     analysis = analyze_video(url, model)
     print(f"[analyze] concept: {analysis['core_concept']}")
     print("[analyze] writing Telugu script ...")
-    script = write_telugu_script(analysis, model, target_sec)
+    print(f"[analyze] writing Telugu script ({mode}) ...")
+    script = write_telugu_script(analysis, model, target_sec, mode)
 
     slug = name or f"{date.today():%Y%m%d}-{config.slugify(script['title_en'])}-{vid}"
     out = config.PROJECTS_DIR / slug
@@ -243,6 +287,7 @@ def run(url: str, name: str | None = None, target_sec: int | None = None) -> Pat
         "source_video_id": vid,
         "created": date.today().isoformat(),
         "model": model,
+        "mode": mode,
         "analysis": analysis,
         "script": script,
     }
