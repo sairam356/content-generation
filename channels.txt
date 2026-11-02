@@ -1,0 +1,4 @@
+# One YouTube channel per line. `python -m pipeline daily` briefs their newest Shorts.
+# Examples (replace with the channels you take inspiration from):
+# https://www.youtube.com/@OsmDhruva
+# https://www.youtube.com/@hankgreen1

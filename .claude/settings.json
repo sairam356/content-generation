@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(higgsfield:*)",
+      "Bash(higgs:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(py:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(ffprobe:*)",
+      "Bash(curl:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(type:*)",
+      "Read",
+      "Write(projects/**)",
+      "Edit(projects/**)",
+      "Edit(.env)",
+      "mcp__higgsfield__*"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git push:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}
