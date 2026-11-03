@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
   Full pipeline for one reference Short:
-    Gemini analysis + Telugu script -> ElevenLabs narration (your voice) -> Claude Code + Higgsfield visuals -> final.mp4
+    Gemini analysis + Telugu script -> ElevenLabs narration (your voice) -> visuals (local Wav2Lip+Gemini images, or Claude Code + Higgsfield) -> final.mp4
 .EXAMPLE
   .\run.ps1 -Url https://www.youtube.com/shorts/abc123DEF45
   .\run.ps1 -Project projects\20261102-my-short-abc123DEF45 -SkipAnalyze        # resume an existing project
-  .\run.ps1 -Url ... -Headless                                                   # no interactive Claude session
+  .\run.ps1 -Url ... -Renderer higgsfield                                        # paid Higgsfield via Claude Code
+  .\run.ps1 -Url ... -Renderer higgsfield -Headless                              # no interactive Claude session
 #>
 param(
   [string]$Url,
@@ -14,7 +15,8 @@ param(
   [switch]$SkipVoice,
   [switch]$BriefOnly,
   [switch]$Headless,
-  [ValidateSet("deep","clean","none")][string]$VoicePreset
+  [ValidateSet("deep","clean","none")][string]$VoicePreset,
+  [ValidateSet("local","higgsfield")][string]$Renderer = "local"
 )
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -44,11 +46,19 @@ if (-not $SkipVoice) {
   if ($LASTEXITCODE -ne 0) { throw "tts failed" }
 }
 
-Write-Host "`n== 3/3 Claude Code + Higgsfield: visuals, lip-sync, assembly ==" -ForegroundColor Yellow
-$prompt = "/make-short $Rel"
-if ($Headless) {
-  claude -p $prompt --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,mcp__higgsfield__*"
+if ($Renderer -eq "local") {
+  Write-Host "`n== 3/3 Local renderer: Wav2Lip (your video + narration) + Gemini images -> assembly ==" -ForegroundColor Yellow
+  & $Py -m pipeline render $Project
+  if ($LASTEXITCODE -ne 0) { throw "render failed" }
+  & $Py -m pipeline assemble $Project
+  if ($LASTEXITCODE -ne 0) { throw "assemble failed" }
 } else {
-  claude $prompt
+  Write-Host "`n== 3/3 Claude Code + Higgsfield: visuals, lip-sync, assembly ==" -ForegroundColor Yellow
+  $prompt = "/make-short $Rel"
+  if ($Headless) {
+    claude -p $prompt --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,mcp__higgsfield__*"
+  } else {
+    claude $prompt
+  }
 }
 if (Test-Path "$Project\final.mp4") { Write-Host "`nDone: $Rel\final.mp4" -ForegroundColor Green }

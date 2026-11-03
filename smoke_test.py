@@ -5,7 +5,8 @@ import json, subprocess, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from pipeline import analyze, voice, assemble
+import os
+from pipeline import analyze, voice, assemble, render_local
 
 fake_analysis = {"title": "Why ice floats", "source_language": "en", "transcript_original": "...", "transcript_english": "...",
     "core_concept": "Ice is less dense than water", "hook": "q",
@@ -44,10 +45,21 @@ for s in brief["script"]["scenes"]:
 brief["script"]["cta_audio_file"] = "audio/cta.wav"
 (out / "brief.json").write_text(json.dumps(brief, ensure_ascii=False, indent=2), encoding="utf-8")
 
-ff("-f", "lavfi", "-i", "testsrc=size=1280x720:rate=24:d=5", "-pix_fmt", "yuv420p", str(out / "clips" / "scene_1.mp4"))
-ff("-f", "lavfi", "-i", "testsrc2=size=720x1280:rate=24:d=5", "-f", "lavfi", "-i", "sine=f=440:d=5", "-shortest",
-   "-pix_fmt", "yuv420p", str(out / "clips" / "scene_2.mp4"))
-ff("-f", "lavfi", "-i", "color=c=blue:size=1080x1920:rate=30:d=2", "-pix_fmt", "yuv420p", str(out / "clips" / "cta.mp4"))
+face = os.environ.get("SMOKE_FACE")  # a photo/video of a face -> also exercise the local Wav2Lip renderer
+if face and (render_local.W2L_DIR / "checkpoints" / "wav2lip_gan.pth").exists():
+    brief["script"]["scenes"][0]["type"] = "presenter_overlay"
+    brief["script"]["scenes"][1]["type"] = "broll"
+    (out / "brief.json").write_text(json.dumps(brief, ensure_ascii=False, indent=2), encoding="utf-8")
+    render_local.base_face = lambda: Path(face)
+    def fake_image(prompt, path, force=False):
+        ff("-f", "lavfi", "-i", "testsrc2=size=1080x1920:d=1", "-frames:v", "1", str(path)); return path
+    render_local.gemini_image = fake_image
+    render_local.render(out, force=True)
+else:
+    ff("-f", "lavfi", "-i", "testsrc=size=1280x720:rate=24:d=5", "-pix_fmt", "yuv420p", str(out / "clips" / "scene_1.mp4"))
+    ff("-f", "lavfi", "-i", "testsrc2=size=720x1280:rate=24:d=5", "-f", "lavfi", "-i", "sine=f=440:d=5", "-shortest",
+       "-pix_fmt", "yuv420p", str(out / "clips" / "scene_2.mp4"))
+    ff("-f", "lavfi", "-i", "color=c=blue:size=1080x1920:rate=30:d=2", "-pix_fmt", "yuv420p", str(out / "clips" / "cta.mp4"))
 
 final = assemble.assemble(out)
 print(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height:format=duration",

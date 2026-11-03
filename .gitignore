@@ -13,3 +13,4 @@ assets/me/voice/*
 *.mp3
 *.wav
 *.log
+tools/

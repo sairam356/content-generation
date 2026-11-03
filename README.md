@@ -113,9 +113,25 @@ setup/                 setup-windows.ps1, register-daily-task.ps1
 run.ps1                end-to-end runner
 ```
 
+## Free local renderer (no Higgsfield)
+
+```powershell
+.\setup\setup-wav2lip.ps1          # once: Wav2Lip + weights into tools\Wav2Lip (CPU; add -Cuda for a >=4 GB NVIDIA GPU)
+# record a 20-30 s vertical phone video of yourself: face well lit, looking at the lens, mouth relaxed, small natural
+# head movement, no talking -> assets\me\video\base.mp4
+.\run.ps1 -Url https://www.youtube.com/shorts/...     # analyze -> tts -> render -> assemble (Renderer=local is default)
+python -m pipeline render projects\<p>                  # or step by step
+python -m pipeline assemble projects\<p>
+```
+
+Presenter scenes = your video lip-synced by Wav2Lip to the ElevenLabs narration; b-roll = Gemini-generated 9:16
+images with a slow zoom; `presenter_overlay` = you in the lower corner over the b-roll (the facts-channel look).
+Rendering a 45 s Short takes a few minutes on a laptop CPU. Lip quality is "phone video", not cinematic — switch
+to `-Renderer higgsfield` (paid) when you want Seedance-grade clips.
+
 ## Offline check
 
-`python smoke_test.py` — no keys or credits: mocked Gemini brief, synthetic audio through the mastering chain,
+`python smoke_test.py` — no keys or credits (set `SMOKE_FACE=<photo>` to also exercise the Wav2Lip renderer): mocked Gemini brief, synthetic audio through the mastering chain,
 synthetic clips assembled to `projects\smoke-test\final.mp4` with Telugu captions.
 
 ## Notes

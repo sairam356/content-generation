@@ -41,6 +41,10 @@ def main(argv=None):
     e.add_argument("dst")
     e.add_argument("--preset", default="deep", choices=["deep", "clean", "none"])
 
+    r = sub.add_parser("render", help="free local renderer: Wav2Lip presenter + Gemini image b-roll -> clips/")
+    r.add_argument("project")
+    r.add_argument("--force", action="store_true", help="re-render existing clips")
+
     s = sub.add_parser("assemble", help="ffmpeg: clips + narration + captions -> final.mp4")
     s.add_argument("project")
     s.add_argument("--music", help="background music file (mixed at low volume)")
@@ -73,6 +77,9 @@ def main(argv=None):
         from pathlib import Path
         from . import voice
         voice.enhance(Path(args.src), Path(args.dst), args.preset)
+    elif args.cmd == "render":
+        from . import render_local
+        render_local.render(config.project_dir(args.project), args.force)
     elif args.cmd == "assemble":
         from . import assemble
         assemble.assemble(config.project_dir(args.project), args.music, args.no_subs)

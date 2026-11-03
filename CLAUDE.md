@@ -13,6 +13,13 @@ The owner's face photos live in `assets/me/photos/`. The owner's Soul ID (Higgsf
 `HIGGSFIELD_SOUL_ID` in `.env` once trained. Everything runs on the owner's Windows PC: use
 PowerShell-compatible commands (`python`, not `python3`; paths with `\` are fine; no `sudo`).
 
+## Two renderers
+
+- **Local (default, free)**: `python -m pipeline render projects/<p>` — Wav2Lip lip-syncs the owner's recorded
+  video (`assets/me/video/`) to the narration, b-roll frames come from Gemini image generation + ffmpeg zoom/pan,
+  `presenter_overlay` scenes composite the owner in the lower corner. No credits. You are not needed for this path.
+- **Higgsfield (paid)**: the `/make-short` workflow below, used with `run.ps1 -Renderer higgsfield`.
+
 ## Replicate mode (default)
 
 `brief.json.mode == "replicate"` means the Short must look like the reference: reproduce each scene's framing,
