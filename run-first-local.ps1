@@ -1,18 +1,24 @@
 <#
 .SYNOPSIS
   One-command first render using a WhatsApp video placed in the repository root.
+  Clones your voice if ElevenLabs allows it; otherwise falls back to a stock Telugu voice.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File .\run-first-local.ps1
+  powershell -ExecutionPolicy Bypass -File .\run-first-local.ps1 -VoiceId <elevenlabs voice id>
 #>
 param(
   [string]$Project = "projects\meal-maker",
-  [string]$Video
+  [string]$Video,
+  [string]$VoiceId,
+  [string]$FallbackVoiceId = "ge94MQm6fYaUCnxz1us6"   # "Srinu" - stock Telugu male voice
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
 $Py = if (Test-Path ".\.venv\Scripts\python.exe") { ".\.venv\Scripts\python.exe" } else { "python" }
 
 if (-not $Video) {
@@ -31,22 +37,32 @@ New-Item -ItemType Directory -Force "assets\me\video", "assets\me\voice" | Out-N
 
 Write-Host "`n== Preparing your face video and voice sample ==" -ForegroundColor Yellow
 Copy-Item $Video "assets\me\video\base.mp4" -Force
-& ffmpeg -y -i $Video -vn -ac 1 -ar 44100 "assets\me\voice\sample.wav"
+& ffmpeg -y -loglevel error -i $Video -vn -ac 1 -ar 44100 "assets\me\voice\sample.wav"
 if ($LASTEXITCODE -ne 0) { throw "Could not extract audio from $Video" }
 
-$voiceId = ""
-if (Test-Path ".env") {
+if (-not $VoiceId -and (Test-Path ".env")) {
   $voiceLine = Get-Content ".env" | Where-Object { $_ -match "^ELEVENLABS_VOICE_ID=.+" } | Select-Object -Last 1
-  if ($voiceLine) { $voiceId = ($voiceLine -split "=", 2)[1].Trim() }
+  if ($voiceLine) { $VoiceId = ($voiceLine -split "=", 2)[1].Trim() }
 }
-if (-not $voiceId) {
+if (-not $VoiceId) {
   Write-Host "`n== Cloning your voice in ElevenLabs ==" -ForegroundColor Yellow
   & $Py -m pipeline voice clone
-  if ($LASTEXITCODE -ne 0) { throw "ElevenLabs voice clone failed" }
+  if ($LASTEXITCODE -eq 0) {
+    $voiceLine = Get-Content ".env" | Where-Object { $_ -match "^ELEVENLABS_VOICE_ID=.+" } | Select-Object -Last 1
+    if ($voiceLine) { $VoiceId = ($voiceLine -split "=", 2)[1].Trim() }
+  } else {
+    Write-Host "Voice cloning not allowed on this ElevenLabs plan/key - using stock Telugu voice $FallbackVoiceId for now." -ForegroundColor Yellow
+    Write-Host "To use YOUR voice later: upgrade to Starter+, create an API key with 'Voices: Write', then run  python -m pipeline voice clone" -ForegroundColor Yellow
+    $VoiceId = $FallbackVoiceId
+  }
 }
 
-Write-Host "`n== Generating and rendering the first Short ==" -ForegroundColor Yellow
-& ".\run.ps1" -Project $Project -SkipAnalyze -Renderer local
+Write-Host "`n== ElevenLabs: Telugu narration (voice $VoiceId) ==" -ForegroundColor Yellow
+& $Py -m pipeline tts $Project --voice-id $VoiceId
+if ($LASTEXITCODE -ne 0) { throw "TTS failed" }
+
+Write-Host "`n== Local renderer: Wav2Lip + Gemini images -> assembly ==" -ForegroundColor Yellow
+& ".\run.ps1" -Project $Project -SkipAnalyze -SkipVoice -Renderer local
 if ($LASTEXITCODE -ne 0) { throw "First local render failed" }
 
 $Final = Join-Path $Project "final.mp4"
