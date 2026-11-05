@@ -74,7 +74,7 @@ def _pollinations_image(prompt: str, out: Path) -> Path | None:
     import urllib.parse
     import requests
     q = urllib.parse.quote(prompt[:900])
-    for attempt in range(3):
+    for attempt in range(6):
         try:
             r = requests.get(f"https://image.pollinations.ai/prompt/{q}",
                              params={"width": 1080, "height": 1920, "nologo": "true", "model": "flux",
@@ -86,11 +86,41 @@ def _pollinations_image(prompt: str, out: Path) -> Path | None:
             print(f"[render]   pollinations attempt {attempt + 1}: HTTP {r.status_code}", file=sys.stderr)
         except Exception as e:  # noqa: BLE001
             print(f"[render]   pollinations attempt {attempt + 1} failed: {str(e)[:160]}", file=sys.stderr)
-        time.sleep(5 * (attempt + 1))
+        time.sleep(15 * (attempt + 1))  # anonymous tier is rate-limited (402/429): back off
     return None
 
 
-def gemini_image(prompt: str, out: Path, force: bool = False) -> Path:
+def _reference_frame(brief: dict, scene: dict, out: Path) -> Path | None:
+    """Last resort: grab the matching frame from the reference Short itself (replicate mode).
+    Note: this reuses the reference's footage - OK for a private test, check rights before publishing."""
+    url = brief.get("source_url")
+    if not url:
+        return None
+    project = out.parent.parent
+    ref = project / "reference.mp4"
+    if not ref.exists():
+        r = subprocess.run([sys.executable, "-m", "yt_dlp", "-q", "-f", "bv*[height<=1920]+ba/b", "--merge-output-format", "mp4",
+                            "-o", str(ref), url], capture_output=True, text=True)
+        if r.returncode != 0 or not ref.exists():
+            print(f"[render]   reference download failed: {r.stderr.strip()[:200]}", file=sys.stderr)
+            return None
+    start = 0.0
+    for sc in brief["script"]["scenes"]:
+        if sc["id"] == scene["id"]:
+            break
+        start += float(sc.get("audio_duration_sec") or sc.get("duration_sec") or 5)
+    at = start + min(1.0, float(scene.get("duration_sec", 5)) / 3)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{at:.2f}", "-i", str(ref), "-frames:v", "1",
+                        "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920", str(out)],
+                       capture_output=True, text=True)
+    if r.returncode == 0 and out.exists():
+        print(f"[render]   using reference frame @{at:.1f}s", file=sys.stderr)
+        return out
+    return None
+
+
+def gemini_image(prompt: str, out: Path, force: bool = False, brief: dict | None = None, scene: dict | None = None) -> Path:
     if out.exists() and not force:
         return out
     full = (f"{prompt}. Vertical 9:16 composition, photorealistic, sharp, high detail, cinematic lighting, "
@@ -126,9 +156,14 @@ def gemini_image(prompt: str, out: Path, force: bool = False) -> Path:
                     time.sleep(4 * (attempt + 1))
         print("[render]   Gemini images unavailable (set IMAGE_PROVIDER=pollinations to skip) - using free pollinations.ai",
               file=sys.stderr)
-    got = _pollinations_image(full, out)
-    if got:
-        return got
+    if provider != "reference":
+        got = _pollinations_image(full, out)
+        if got:
+            return got
+    if brief is not None and scene is not None:
+        got = _reference_frame(brief, scene, out)
+        if got:
+            return got
     sys.exit(f"[render] image generation failed: {last}")
 
 
@@ -180,7 +215,7 @@ def render(project: Path, force: bool = False) -> Path:
         if kind == "presenter":
             wav2lip(face, audio, out, force)
             continue
-        frame = gemini_image(s.get("image_prompt") or s["visual_prompt"], frames / f"scene_{sid}.png", force)
+        frame = gemini_image(s.get("image_prompt") or s["visual_prompt"], frames / f"scene_{sid}.png", force, brief, s)
         bg = zoompan(frame, build / f"bg_{sid}.mp4", secs, force)
         if kind == "broll":
             if force or not out.exists():
