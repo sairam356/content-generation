@@ -59,7 +59,7 @@ def wav2lip(face: Path, audio: Path, out: Path, force: bool = False) -> Path:
     resize = config.env("WAV2LIP_RESIZE", "2")
     t0 = time.time()
     cmd = [str(w2l_python()), "inference.py", "--checkpoint_path", "checkpoints/wav2lip_gan.pth",
-           "--face", str(face), "--audio", str(audio), "--outfile", str(out),
+           "--face", str(face.resolve()), "--audio", str(audio.resolve()), "--outfile", str(out.resolve()),
            "--resize_factor", resize, "--pads", "0", "15", "0", "0",
            "--wav2lip_batch_size", config.env("WAV2LIP_BATCH", "16"), "--face_det_batch_size", "2"]
     if face.suffix.lower() in IMAGE_EXT:
