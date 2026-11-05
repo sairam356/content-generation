@@ -5,6 +5,9 @@ from . import config
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(prog="python -m pipeline",
                                 description="YouTube Short -> Telugu AI-presenter Short (Gemini + ElevenLabs + Higgsfield)")
     sub = p.add_subparsers(dest="cmd", required=True)
