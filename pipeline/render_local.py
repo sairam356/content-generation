@@ -69,35 +69,66 @@ def wav2lip(face: Path, audio: Path, out: Path, force: bool = False) -> Path:
     return out
 
 
+def _pollinations_image(prompt: str, out: Path) -> Path | None:
+    """Free, key-less fallback (Flux via pollinations.ai) when Gemini image models are unavailable."""
+    import urllib.parse
+    import requests
+    q = urllib.parse.quote(prompt[:900])
+    for attempt in range(3):
+        try:
+            r = requests.get(f"https://image.pollinations.ai/prompt/{q}",
+                             params={"width": 1080, "height": 1920, "nologo": "true", "model": "flux",
+                                     "seed": 11 + attempt}, timeout=180)
+            if r.status_code == 200 and r.headers.get("content-type", "").startswith("image/"):
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_bytes(r.content)
+                return out
+            print(f"[render]   pollinations attempt {attempt + 1}: HTTP {r.status_code}", file=sys.stderr)
+        except Exception as e:  # noqa: BLE001
+            print(f"[render]   pollinations attempt {attempt + 1} failed: {str(e)[:160]}", file=sys.stderr)
+        time.sleep(5 * (attempt + 1))
+    return None
+
+
 def gemini_image(prompt: str, out: Path, force: bool = False) -> Path:
     if out.exists() and not force:
         return out
-    from google import genai
-    from google.genai import types
-    client = genai.Client(api_key=config.require_env("GEMINI_API_KEY"))
-    models = [m for m in config.env("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image,gemini-3-pro-image-preview").split(",") if m]
     full = (f"{prompt}. Vertical 9:16 composition, photorealistic, sharp, high detail, cinematic lighting, "
             "no text, no captions, no watermark, no logos.")
+    provider = config.env("IMAGE_PROVIDER", "gemini").lower()
     last = None
-    for model in models:
-        for attempt in range(3):
-            try:
-                cfg = types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
+    if provider == "gemini":
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=config.require_env("GEMINI_API_KEY"))
+        models = [m for m in config.env("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image,gemini-3-pro-image-preview").split(",") if m]
+        for model in models:
+            for attempt in range(3):
                 try:
-                    cfg.image_config = types.ImageConfig(aspect_ratio="9:16")
-                except Exception:  # noqa: BLE001 - older SDK without ImageConfig
-                    pass
-                resp = client.models.generate_content(model=model, contents=full, config=cfg)
-                for part in resp.candidates[0].content.parts:
-                    if getattr(part, "inline_data", None) and part.inline_data.data:
-                        out.parent.mkdir(parents=True, exist_ok=True)
-                        out.write_bytes(part.inline_data.data)
-                        return out
-                raise RuntimeError("no image in response")
-            except Exception as e:  # noqa: BLE001
-                last = e
-                print(f"[render]   image {model} attempt {attempt + 1} failed: {str(e)[:160]}", file=sys.stderr)
-                time.sleep(4 * (attempt + 1))
+                    cfg = types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
+                    try:
+                        cfg.image_config = types.ImageConfig(aspect_ratio="9:16")
+                    except Exception:  # noqa: BLE001 - older SDK without ImageConfig
+                        pass
+                    resp = client.models.generate_content(model=model, contents=full, config=cfg)
+                    for part in resp.candidates[0].content.parts:
+                        if getattr(part, "inline_data", None) and part.inline_data.data:
+                            out.parent.mkdir(parents=True, exist_ok=True)
+                            out.write_bytes(part.inline_data.data)
+                            return out
+                    raise RuntimeError("no image in response")
+                except Exception as e:  # noqa: BLE001
+                    last = e
+                    msg = str(e)
+                    print(f"[render]   image {model} attempt {attempt + 1} failed: {msg[:160]}", file=sys.stderr)
+                    if "RESOURCE_EXHAUSTED" in msg or "429" in msg:
+                        break  # quota (free tier has 0 image quota): don't burn time retrying
+                    time.sleep(4 * (attempt + 1))
+        print("[render]   Gemini images unavailable (set IMAGE_PROVIDER=pollinations to skip) - using free pollinations.ai",
+              file=sys.stderr)
+    got = _pollinations_image(full, out)
+    if got:
+        return got
     sys.exit(f"[render] image generation failed: {last}")
 
 
