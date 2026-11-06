@@ -39,3 +39,6 @@ without listing it.
 ## Done means
 Each skill ends with a "Done means" list. You are not finished until every item is true and shown in your final
 message (paths, numbers). A skipped item is reported as skipped with the reason, never silently.
+
+## Owner device
+The owner's production machine is Windows. For every Claude in Chrome call, always target the connected Windows Chrome browser. Never use a connected Mac browser and never ask the owner to choose between browsers. If a device ID is needed, discover the Windows device and proceed. Downloads must land on the Windows PC.

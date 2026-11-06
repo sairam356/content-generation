@@ -16,7 +16,7 @@ library has ~10,000 tracks and sits behind the owner's Google login, so you brow
 - Reply: the table of picks.
 
 ## Steps (think like a music supervisor choosing beds for talking-head Shorts)
-1. Chrome tools available? If `mcp__claude-in-chrome__*` is missing: tell the owner to install the "Claude in
+1. Always select the connected Windows Chrome browser automatically (never Mac, never ask). Then check: Chrome tools available? If `mcp__claude-in-chrome__*` is missing: tell the owner to install the "Claude in
    Chrome" extension, run `claude` with `/chrome` enabled, and stop.
 2. Open `https://studio.youtube.com` → left menu "Audio Library" → "Free music" tab. Filters: Attribution
    required = "Not required"; Vocals = none (instrumental); Duration 1-3 min; then per mood use the Mood filter
