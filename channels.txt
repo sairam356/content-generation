@@ -1,16 +1,14 @@
 # One YouTube channel per line (python -m pipeline channels reads these). Owner's inspiration list, 2026-11-06.
-https://www.youtube.com/@OsmDhruva
-https://www.youtube.com/channel/UCABRJvxdJDsb5Gm8fTpWh5w\tFangs & Facts\t5 Wild Snake Facts You Didn’t Know! 🐍   # 
-https://www.youtube.com/channel/UCBWx1z-MUF1nr9sbAcKOzOA\tAnnu Facts 3D\tHow Can a Snail Crawl Over a Razor Blade?! 😱 #shorts #facts #snail #sciencefacts #snailfacts #blade   # 
-https://www.youtube.com/channel/UCCmv5rEGE5GNRIjwywS98tg\tLazy Proton\tఈ కప్పకు ఇన్ని ముడతలు ఎందుకు?   # 
-https://www.youtube.com/channel/UCDRCPY8uJfhNvpi9bd0m-xg\tinformation world\t8 Countries With Amazing Facts 🌍😱   # 
-https://www.youtube.com/channel/UCErRiAj1rGIyFqNtQ3INgng\tTrue Facts Telugu\tTiger Facts in Telugu #factsintelugu 😱పులి Facts😱 #amazingfacts #truefacts #shorts   # 
-https://www.youtube.com/channel/UCPUOLVD1BdnOIRQ8yE9Gr9Q\tMahesh Malle\t₹0 TAX! #facts #factshorts #shorts   # 
-https://www.youtube.com/channel/UCUURo-S4UgskWmMdyrxvBwQ\tFact maze telugu \tWhy Ice Cream Shops Doing This Wantedly 🔥|#telugufacts #telugu #shorts #viralnews #viral   # 
-https://www.youtube.com/channel/UCdSjVy9NnJk7YFtReogKMmw\tLOKESH FACTS IN TELUGU\tWhy tuna fish has dark muscle in Telugu   # 
-https://www.youtube.com/channel/UCdrSr-MTddxeOuUMnya91Eg\tFactstubE telugu\ttop 5 interesting facts in telugu 🤯#telugufacts #amazingfacts #unknownfacts #interestingfacts   # 
-https://www.youtube.com/channel/UCdrSr-MTddxeOuUMnya91Eg\tFactstubE telugu\ttop 5 intersting facts in telugu 🤯#telugufacts #facts #unknownfacts #interestingfacts #amazingfacts   # 
-https://www.youtube.com/channel/UCo9dTlpm0hV3j3aRpSz-NYg\tFactoPedia Telugu\t😱Nemo Point in Pacific Ocean |  Telugu facts   # 
-https://www.youtube.com/channel/UCvz84_Q0BbvZThy75mbd-Dg\tZack D. Films\t3 Facts You NEED To Know 😦   # 
-https://www.youtube.com/channel/UCvz84_Q0BbvZThy75mbd-Dg\tZack D. Films\t4 Interesting Facts You Didn't Ask For 😧   # 
-https://www.youtube.com/channel/UCwgPdz1IA3zSAAeNHJfALVg\tInfo Hub\tFun Facts about Philippines...   # 
+https://www.youtube.com/@OsmDhruva   # Osm Dhruva
+https://www.youtube.com/channel/UCBWx1z-MUF1nr9sbAcKOzOA   # Annu Facts 3D
+https://www.youtube.com/channel/UCUURo-S4UgskWmMdyrxvBwQ   # Fact maze telugu
+https://www.youtube.com/channel/UCo9dTlpm0hV3j3aRpSz-NYg   # FactoPedia Telugu
+https://www.youtube.com/channel/UCdrSr-MTddxeOuUMnya91Eg   # FactstubE telugu
+https://www.youtube.com/channel/UCABRJvxdJDsb5Gm8fTpWh5w   # Fangs & Facts
+https://www.youtube.com/channel/UCwgPdz1IA3zSAAeNHJfALVg   # Info Hub
+https://www.youtube.com/channel/UCDRCPY8uJfhNvpi9bd0m-xg   # information world
+https://www.youtube.com/channel/UCCmv5rEGE5GNRIjwywS98tg   # Lazy Proton
+https://www.youtube.com/channel/UCdSjVy9NnJk7YFtReogKMmw   # LOKESH FACTS IN TELUGU
+https://www.youtube.com/channel/UCPUOLVD1BdnOIRQ8yE9Gr9Q   # Mahesh Malle
+https://www.youtube.com/channel/UCErRiAj1rGIyFqNtQ3INgng   # True Facts Telugu
+https://www.youtube.com/channel/UCvz84_Q0BbvZThy75mbd-Dg   # Zack D. Films

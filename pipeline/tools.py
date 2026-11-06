@@ -47,7 +47,7 @@ def _ytdlp() -> list[str]:
 def channels(limit: int = 15) -> Path:
     """Recent Shorts (title, views, url) for every channel in channels.txt -> .state/channels.json."""
     f = config.ROOT / "channels.txt"
-    chans = [l.strip() for l in f.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")]
+    chans = [l.split("#")[0].strip() for l in f.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")]
     if not chans:
         sys.exit("[channels] channels.txt is empty - add one YouTube channel URL per line")
     result = []
