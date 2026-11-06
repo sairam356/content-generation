@@ -182,11 +182,16 @@ TELEPROMPTER_HTML = """<!doctype html><html lang="te"><head><meta charset="utf-8
 <script>
  let speed={speed},run=false,y=0,last=null,txt=document.getElementById('txt'),fs={size};
  const play=document.getElementById('play'),listen=document.getElementById('listen'),sp=document.getElementById('sp'),st=document.getElementById('st');
+ const audioAvailable={audio},audio=new Audio('teleprompter.mp3');
  function status(){{play.textContent=run?'Pause':'Start';sp.textContent=speed;st.firstChild.textContent=(run?'Running':'Paused')+' · ';}}
  function toggle(){{run=!run;status()}}
- function restart(){{y=0;window.scrollTo(0,0);run=false;speechSynthesis.cancel();listen.textContent='Listen';status()}}
+ function restart(){{y=0;window.scrollTo(0,0);run=false;audio.pause();audio.currentTime=0;speechSynthesis.cancel();listen.textContent='Listen';status()}}
  function scriptText(){{return [...document.querySelectorAll('.beat')].map(p=>{{const q=p.cloneNode(true);q.querySelectorAll('.cue').forEach(x=>x.remove());return q.textContent.trim()}}).join('. ')}}
  function speak(){{
+  if(audioAvailable){{
+   if(!audio.paused){{audio.pause();listen.textContent='Listen';status();return}}
+   speechSynthesis.cancel();audio.play();listen.textContent='Stop audio';st.firstChild.textContent='Listening · ';return
+  }}
   if(speechSynthesis.speaking){{speechSynthesis.cancel();listen.textContent='Listen';return}}
   const u=new SpeechSynthesisUtterance(scriptText()),voices=speechSynthesis.getVoices();
   u.lang='te-IN';u.rate=.9;u.pitch=1;
@@ -211,6 +216,7 @@ TELEPROMPTER_HTML = """<!doctype html><html lang="te"><head><meta charset="utf-8
  document.getElementById('faster').onclick=()=>{{speed+=10;status()}};
  document.getElementById('mirror').onclick=()=>document.body.classList.toggle('mirror');
  document.getElementById('full').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+ audio.onended=()=>{{listen.textContent='Listen';status()}};
  status();
 </script></body></html>"""
 
@@ -224,8 +230,20 @@ def teleprompter(script_path: Path) -> Path:
         cue = b.get("delivery") or ""
         parts.append(f'<p class="beat"><span class="cue">{b["id"]}. {cue}</span>{b["text_te"]}</p>')
     parts.append(f'<p class="beat cta"><span class="cue">CTA - smile</span>{s["cta_te"]}</p>')
+    speech = ". ".join([s["hook_te"], *(b["text_te"] for b in s["beats"]), s["cta_te"]])
+    audio = script_path.with_name("teleprompter.mp3")
+    try:
+        import asyncio
+        import edge_tts
+        voice = config.env("PROMPTER_VOICE", "te-IN-MohanNeural")
+        asyncio.run(edge_tts.Communicate(speech, voice, rate="-5%").save(str(audio)))
+        print(f"[teleprompter] audio: {audio} ({voice})")
+    except Exception as e:  # browser speech synthesis remains as an offline fallback
+        audio.unlink(missing_ok=True)
+        print(f"[teleprompter] Telugu audio unavailable ({e}); browser voice fallback only", file=sys.stderr)
     html = TELEPROMPTER_HTML.format(title=s.get("title_te", "Teleprompter"), body="\n".join(parts),
-                                    speed=int(config.env("PROMPTER_SPEED", "55")), size=int(config.env("PROMPTER_FONT", "54")))
+                                    speed=int(config.env("PROMPTER_SPEED", "55")), size=int(config.env("PROMPTER_FONT", "54")),
+                                    audio="true" if audio.exists() else "false")
     out = script_path.with_name("teleprompter.html")
     out.write_text(html, encoding="utf-8")
     print(f"[teleprompter] {out}  (open in a browser; SPACE to start)")
