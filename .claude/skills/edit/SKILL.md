@@ -24,6 +24,8 @@ Find the script: given, else newest `topics/*/*/script.json` whose hook matches 
    `memory/style.md`, `memory/references.md`, `memory/learnings.md`, the script.
 2. `python -m pipeline transcribe <recording>` → `Read words.json`. Whisper's Telugu spelling is unreliable:
    captions come from the SCRIPT; Whisper gives timing only. Map each script sentence to its words.
+   With `--no-script` (smoke tests only) Whisper's text is the only source and it may be wrong for Telugu:
+   write captions by meaning from the audio, say so in `ready/<name>.md`, and never upload without the owner checking them.
 3. Decide the cut as a human would - watch for: dead air, breaths > 0.6 s, false starts, repeated takes (keep the
    LAST good one), coughs, "umm", the eyes-reading-the-prompter pause before a sentence. Cut on word boundaries,
    leave ~0.15 s of air. Hook starts within 0.3 s of the video start. Target the script's est_sec (45-60 s).
