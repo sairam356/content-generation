@@ -1,3 +1,6 @@
 # Learnings (appended by /retro, read by every skill)
 
 <!-- one bullet per learning: date | video | what we tried | what happened | rule going forward -->
+- 2026-11-06 | test-telugu-youtube-idea | faster-whisper small/medium with language=te on a phone recording of Telugu-English speech | Telugu text was garbage (medium hallucinated Bengali script), the default run looped for 18+ min; language=en gave usable word timings but as a translation | for unscripted takes use the en pass + a 20 ms RMS energy envelope for cut points (Whisper word gaps were wrong several times), and mark captions "meaning-level, owner confirms"; scripted takes caption from the script as designed.
+- 2026-11-06 | test-telugu-youtube-idea | presenter-only render (no b-roll) | label at y1040 covered the mouth, static 38 s read flat | compose now moves labels to the top band on full-frame beats and supports per-beat `zoom`; use punch-ins on the hook, the CTA and every jump cut, not on every beat (panel called a 1.0/1.15 flip "template").
+- 2026-11-06 | test-telugu-youtube-idea | opening on "Hey, how are you?" | reach 2/10, predicted swipe at 2 s | open on his strongest opinion line even if it means re-ordering `keep` (compose supports re-ordered keep now).

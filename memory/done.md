@@ -1,1 +1,3 @@
 # Made videos (appended by /edit)
+
+2026-11-06 | test-telugu-youtube-idea | channel-idea intro (workflow TEST, --no-script, sample WhatsApp recording) | corner requested -> presenter full-frame (BROLL_PROVIDER=none) | 32.5s | upbeat-floating-on-fire @0.09 | SHIP-AS-TEST (3 rounds; captions need owner check)

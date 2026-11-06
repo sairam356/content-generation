@@ -219,7 +219,12 @@ class _Remap:
             acc += e - s
         self.total = acc
 
-    def __call__(self, t: float) -> float:
+    def __call__(self, t: float, end: bool = False) -> float:
+        # keep may be re-ordered (e.g. a later line used as the hook): first find the segment that contains t.
+        # A shared boundary belongs to the segment it ENDS when `end` (beat/caption ends), else to the one it starts.
+        for (s, e), off in zip(self.keep, self.offsets):
+            if (s < t <= e) if end else (s <= t < e):
+                return off + (t - s)
         for (s, e), off in zip(self.keep, self.offsets):
             if t < s:
                 return off
@@ -289,9 +294,16 @@ def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
     return out
 
 
-def _presenter_segment(cut: Path, start: float, end: float, out: Path) -> Path:
+def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: float = 1.0, grade: str = "") -> Path:
+    """Presenter full-frame. zoom > 1 = editor's punch-in (crop anchored near the top so the head is not clipped).
+    grade = optional ffmpeg filter (e.g. "eq=gamma=1.12") from plan.json to lift an under-exposed face."""
+    vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}"
+    if zoom > 1.0:
+        vf += f",scale={round(W * zoom / 2) * 2}:{round(H * zoom / 2) * 2},crop={W}:{H}:(iw-{W})/2:(ih-{H})*0.08"
+    if grade:
+        vf += f",{grade}"
     _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.3f}", "-to", f"{end:.3f}", "-i", str(cut), "-an",
-          "-vf", f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},format=yuv420p",
+          "-vf", f"{vf},fps={FPS},format=yuv420p",
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
     return out
 
@@ -344,23 +356,25 @@ def compose(plan_path: Path) -> Path:
     cut = _cut(rec, keep, work / "cut.mkv")
 
     beats = plan["beats"]
-    clips = []
+    clips, full_frame = [], set()  # full_frame: beat ids shown presenter-only (labels move off the face)
     for b in beats:
-        s, e = remap(float(b["start"])), remap(float(b["end"]))
+        s, e = remap(float(b["start"])), remap(float(b["end"]), end=True)
         if e - s < 0.3:
             continue
         kind = b.get("kind", "explain")
-        pres = _presenter_segment(cut, s, e, work / f"pres_{b['id']}.mp4")
+        pres = _presenter_segment(cut, s, e, work / f"pres_{b['id']}.mp4", float(b.get("zoom", 1.0)), plan.get("grade", ""))
         print(f"[compose] beat {b['id']} ({kind}, {e - s:.1f}s)")
         if kind in ("hook", "cta") or layout == "full":
-            clips.append(pres)
+            clips.append(pres); full_frame.add(b["id"])
             continue
         bg = _broll(b, e - s + 0.5, work / f"bg_{b['id']}.mp4", style)
         if bg is None:
-            clips.append(pres)
+            print(f"[compose]   beat {b['id']}: no background (BROLL_PROVIDER=none or failed) - presenter full-frame")
+            clips.append(pres); full_frame.add(b["id"])
             continue
         clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s))
 
+    ai_beats = sum(1 for b in beats if b["id"] not in full_frame and (work / f"beat_{b['id']}.mp4") in clips)
     lst = work / "concat.txt"
     lst.write_text("".join(f"file '{c.resolve().as_posix()}'\n" for c in clips), encoding="utf-8")
     joined = work / "joined.mp4"
@@ -373,22 +387,24 @@ def compose(plan_path: Path) -> Path:
         "[Script Info]", "ScriptType: v4.00+", f"PlayResX: {W}", f"PlayResY: {H}", "WrapStyle: 0", "",
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-        f"Style: Cap,{font},64,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,0,2,60,60,300,1",
-        f"Style: CapHi,{font},64,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,0,2,60,60,300,1",
-        f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,170,1",
+        # Shorts safe zone: keep text out of the top ~220 px (search/menu) and bottom ~420 px (title/channel/buttons)
+        f"Style: Cap,{font},86,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,0,2,60,60,440,1",
+        f"Style: CapHi,{font},86,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,0,2,60,60,440,1",
+        f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,230,1",
         f"Style: Label,{font},52,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,8,90,90,1040,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     title = plan.get("title_te")
     if title and beats:
-        h0, h1 = remap(float(beats[0]["start"])), remap(float(beats[0]["end"]))
+        h0, h1 = remap(float(beats[0]["start"])), remap(float(beats[0]["end"]), end=True)
         ass.append(f"Dialogue: 2,{_ass_time(h0)},{_ass_time(min(h1, h0 + 4.0))},Title,,0,0,0,,{_esc(title)}")
     for b in beats:
         lab = (b.get("label_te") or "").strip()
         if lab and b.get("kind", "explain") not in ("hook", "cta"):
-            ass.append(f"Dialogue: 1,{_ass_time(remap(float(b['start'])))},{_ass_time(remap(float(b['end'])))},Label,,0,0,0,,{_esc(lab)}")
+            mv = 230 if b["id"] in full_frame else 0  # presenter full-frame: label in the top band, not on the face
+            ass.append(f"Dialogue: 1,{_ass_time(remap(float(b['start'])))},{_ass_time(remap(float(b['end']), end=True))},Label,,0,0,{mv},,{_esc(lab)}")
         for c in b.get("captions", []):
-            cs, ce = remap(float(c["start"])), remap(float(c["end"]))
+            cs, ce = remap(float(c["start"])), remap(float(c["end"]), end=True)
             if ce - cs < 0.15:
                 continue
             ass.append(f"Dialogue: 0,{_ass_time(cs)},{_ass_time(ce - 0.03)},Cap,,0,0,0,,{_esc(c['text'])}")
@@ -419,7 +435,7 @@ def compose(plan_path: Path) -> Path:
         fc += f";[{idx}:a]volume={float(fx.get('gain', 0.5))},adelay={int(at * 1000)}|{int(at * 1000)}[fx{n}]"
         mix.append(f"[fx{n}]"); idx += 1
     if len(mix) > 1:
-        fc += f";{''.join(mix)}amix=inputs={len(mix)}:duration=first:dropout_transition=0:normalize=0[a]"
+        fc += f";{''.join(mix)}amix=inputs={len(mix)}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.84:level=0[a]"  # music/SFX can push true peak past -1 dBTP
     else:
         fc += ";[voice]anull[a]"
     cmd += ["-filter_complex", fc, "-map", "[v]", "-map", "[a]", "-t", f"{remap.total:.3f}", "-c:v", "libx264",
@@ -430,8 +446,10 @@ def compose(plan_path: Path) -> Path:
     thumb_at = float(plan.get("thumbnail_sec", remap(float(beats[0]["start"])) + 0.8 if beats else 1.0))
     thumbnail(joined, thumb_at, plan.get("thumbnail_text_te") or plan.get("title_te") or "", accent, ready / f"{name}.jpg", font)
     meta = [f"# {plan.get('title_te', name)}", "", plan.get("description_te", ""), "",
-            " ".join(plan.get("hashtags", [])), "", f"Duration: {duration(final):.1f}s  Layout: {layout}",
-            "Label at upload: 'Altered or synthetic content' = YES only if AI b-roll is used (it is, when backgrounds are generated)."]
+            " ".join(plan.get("hashtags", [])), "", f"Duration: {duration(final):.1f}s  Layout: {layout}"
+            + (" (rendered presenter full-frame: no backgrounds generated)" if not ai_beats and layout != "full" else ""),
+            (f"Label at upload: 'Altered or synthetic content' = YES - AI-generated backgrounds on {ai_beats} beat(s)."
+             if ai_beats else "Label at upload: 'Altered or synthetic content' = NO - no AI-generated visuals in this render.")]
     (ready / f"{name}.md").write_text("\n".join(meta), encoding="utf-8")
     print(f"[compose] ready: {final}  ({duration(final):.1f}s)")
     print(final)
@@ -449,14 +467,15 @@ def thumbnail(video: Path, at: float, text: str, accent: str, out: Path, font: s
     acc = accent.lstrip("#")
     ass = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {W}", f"PlayResY: {H}", "", "[V4+ Styles]",
            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-           f"Style: T,{font},118,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,9,4,8,50,50,260,1",
-           f"Style: U,{font},118,&H00{acc[4:6]}{acc[2:4]}{acc[0:2]},&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,8,50,50,260,1",
+           f"Style: T,{font},118,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,9,4,8,50,50,110,1",
+           f"Style: U,{font},118,&H00{acc[4:6]}{acc[2:4]}{acc[0:2]},&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,8,50,50,110,1",
            "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
            f"Dialogue: 0,0:00:00.00,0:00:01.00,T,,0,0,0,,{txt}"]
     ass_p = out.with_suffix(".thumb.ass"); ass_p.write_text("\n".join(ass), encoding="utf-8")
     ass_arg = ass_p.resolve().as_posix().replace(":", "\\:")
-    vf = (f"eq=contrast=1.08:saturation=1.15,drawbox=x=0:y=0:w={W}:h=520:color=black@0.45:t=fill,"
-          f"drawbox=x=60:y=560:w=360:h=14:color=0x{acc}:t=fill,subtitles='{ass_arg}'")
+    # title band kept in the top 420 px (above the head in a normal selfie framing); accent rule centred under it
+    vf = (f"eq=contrast=1.08:saturation=1.15,drawbox=x=0:y=0:w={W}:h=420:color=black@0.45:t=fill,"
+          f"drawbox=x={(W - 360) // 2}:y=400:w=360:h=14:color=0x{acc}:t=fill,subtitles='{ass_arg}'")
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(frame), "-vf", vf, "-frames:v", "1", "-q:v", "2", str(out)])
     wide = out.with_name(out.stem + "_wide.jpg")
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(out), "-vf", "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720", "-q:v", "2", str(wide)])
