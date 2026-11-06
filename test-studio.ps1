@@ -8,7 +8,8 @@
 #>
 param(
   [string]$Recording = "",
-  [string]$Layout = "corner"
+  [string]$Layout = "corner",
+  [int]$Count = 2
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,7 +49,7 @@ This is the owner's explicitly approved end-to-end workflow TEST.
 
 $prompt | claude --model opus -p --permission-mode acceptEdits `
   --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" 2>&1 |
-  Tee-Object -FilePath $log
+  ForEach-Object { Write-Host $_; Add-Content -Path $log -Value "$_" -Encoding UTF8 }
 
 $output = Get-ChildItem "ready" -Filter "*.mp4" |
   Where-Object { $_.LastWriteTime -ge $before } |
@@ -56,13 +57,24 @@ $output = Get-ChildItem "ready" -Filter "*.mp4" |
   Select-Object -First 1
 
 if (-not $output) {
-  throw "End-to-end test produced no ready MP4. See $log"
+  Write-Host "FAIL: no ready MP4 for $Recording. See $log" -ForegroundColor Red
+  $results += "FAIL (no output)  $Recording  log=$log"
+  continue
 }
 
 python -m pipeline verify $output.FullName | Out-File -Append -FilePath $log -Encoding utf8
 if ($LASTEXITCODE -ne 0) {
-  throw "Output failed verification (incomplete or unplayable MP4): $($output.FullName). See $log"
+  Write-Host "FAIL: $($output.FullName) failed verification (incomplete/unplayable). See $log" -ForegroundColor Red
+  $results += "FAIL (verify)  $($output.FullName)  log=$log"
+  continue
 }
 
-Write-Host "READY: $($output.FullName)" -ForegroundColor Green
-Write-Host "LOG:   $((Resolve-Path $log).Path)"
+Write-Host "READY (verified): $($output.FullName)" -ForegroundColor Green
+$results += "OK  $($output.FullName)  log=$log"
+}
+
+Write-Host ""
+Write-Host "=== SMOKE TEST SUMMARY ($($results.Count) recordings) ==="
+$results | ForEach-Object { Write-Host $_ }
+$results | Out-File -FilePath ".state\e2e-summary.txt" -Encoding utf8
+if ($results -match '^FAIL') { exit 1 }
