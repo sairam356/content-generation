@@ -395,18 +395,20 @@ def compose(plan_path: Path) -> Path:
         # Shorts safe zone: keep text out of the top ~220 px (search/menu) and bottom ~420 px (title/channel/buttons)
         f"Style: Cap,{font},86,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,0,2,60,60,440,1",
         f"Style: CapHi,{font},86,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,0,2,60,60,440,1",
-        f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,230,1",
-        f"Style: Label,{font},52,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,8,90,90,1040,1",
+        f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,280,1",
+        f"Style: Label,{font},64,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,8,90,90,1040,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     title = plan.get("title_te")
     if title and beats:
         h0, h1 = remap(float(beats[0]["start"])), remap(float(beats[0]["end"]), end=True)
-        ass.append(f"Dialogue: 2,{_ass_time(h0)},{_ass_time(min(h1, h0 + 4.0))},Title,,0,0,0,,{_esc(title)}")
+        card = float(plan.get("title_card_sec", 4.0))  # 0 = no title card on the hook
+        if card > 0:
+            ass.append(f"Dialogue: 2,{_ass_time(h0)},{_ass_time(min(h1, h0 + card))},Title,,0,0,0,,{_esc(title)}")
     for b in beats:
         lab = (b.get("label_te") or "").strip()
         if lab and b.get("kind", "explain") not in ("hook", "cta"):
-            mv = 230 if b["id"] in full_frame else 0  # presenter full-frame: label in the top band, not on the face
+            mv = 300 if b["id"] in full_frame else 0  # presenter full-frame: label in the top band (below the ~250 px UI band), not on the face
             ass.append(f"Dialogue: 1,{_ass_time(remap(float(b['start'])))},{_ass_time(remap(float(b['end']), end=True))},Label,,0,0,{mv},,{_esc(lab)}")
         for c in b.get("captions", []):
             cs, ce = remap(float(c["start"])), remap(float(c["end"]), end=True)
