@@ -11,6 +11,6 @@ $env:Path = "$Root\.venv\Scripts;$env:Path"
 New-Item -ItemType Directory -Force -Path "topics", ".state" | Out-Null
 $log = ".state\daily-$(Get-Date -Format yyyyMMdd).log"
 "== $(Get-Date) /topics $Count $Focus" | Tee-Object -FilePath $log -Append
-claude -p "/topics $Count $Focus" --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch,Agent" 2>&1 | Tee-Object -FilePath $log -Append
+claude --model opus -p "/topics $Count $Focus" --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch,Agent" 2>&1 | Tee-Object -FilePath $log -Append
 $today = Get-Date -Format yyyy-MM-dd
 if (Test-Path "topics\$today\README.md") { Start-Process "topics\$today\README.md" }

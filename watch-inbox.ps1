@@ -27,7 +27,7 @@ while ($true) {
     Write-Host "`n== $(Get-Date -Format HH:mm) editing $($f.Name) -> $job" -ForegroundColor Yellow
     $args = "/edit $job\$($f.Name)"
     if ($Layout) { $args += " --layout $Layout" }
-    claude -p $args --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" 2>&1 | Tee-Object -FilePath $log
+    claude --model opus -p $args --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" 2>&1 | Tee-Object -FilePath $log
     $out = Get-ChildItem ready -Filter "*.mp4" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($out -and $out.LastWriteTime -gt (Get-Date).AddMinutes(-90)) {
       Write-Host "READY: $($out.FullName)" -ForegroundColor Green

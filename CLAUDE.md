@@ -21,6 +21,10 @@ Read `.claude/skills/_shared/preamble.md` at the start of every skill. Read `ETH
 | `/analytics [csv]` | Studio analytics → diagnosis per video → rules in memory (weekly) |
 | `/retro` | learnings → `memory/learnings.md` |
 
+## Models
+Generation (`/topics`, `/script`, `/edit`, `/publish`) runs on Opus at high effort (`.claude/settings.json`). The specialist
+agents are planners/reviewers and run on Sonnet (fast); if Sonnet is unavailable they fall back to Opus.
+
 ## Specialist panel (`.claude/agents/`, dispatched with the Agent tool, in parallel)
 `designer` (look & feel) · `taste` (feel, tone, premium-ness) · `end-viewer` (3 Telugu viewers, second by second) ·
 `comparison` (vs references: format fidelity + originality) · `compliance` (policy/youtube.md, facts, metadata) ·
