@@ -110,6 +110,7 @@ def transcribe(media: Path, out: Path | None = None, language: str | None = "te"
     """Word-level timings of a recording -> words.json. Needs `pip install faster-whisper` (CPU is fine)."""
     media = Path(media)
     out = out or media.with_name("words.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
     wav = out.with_suffix(".16k.wav")
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(media), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(wav)])
     try:
