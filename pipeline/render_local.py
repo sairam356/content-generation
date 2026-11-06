@@ -134,8 +134,15 @@ def gemini_image(prompt: str, out: Path, force: bool = False, brief: dict | None
                   "no split-screen): " + prompt)
     full = (f"{prompt}. Vertical 9:16 composition, photorealistic, sharp, high detail, cinematic lighting, "
             "no text, no captions, no watermark, no logos, no close-up human faces.")
-    provider = config.env("IMAGE_PROVIDER", "gemini").lower()
+    provider = config.env("IMAGE_PROVIDER", "elevenlabs" if config.env("ELEVENLABS_API_KEY") else "gemini").lower()
     last = None
+    if provider == "elevenlabs":
+        from . import xi_media
+        try:
+            return xi_media.generate_image(full, out)
+        except Exception as e:  # noqa: BLE001
+            last = e
+            print(f"[render]   {e} - falling back", file=sys.stderr)
     if provider == "gemini":
         from google import genai
         from google.genai import types
@@ -176,6 +183,35 @@ def gemini_image(prompt: str, out: Path, force: bool = False, brief: dict | None
     sys.exit(f"[render] image generation failed: {last}")
 
 
+def fit_clip(src: Path, out: Path, seconds: float, force: bool = False) -> Path:
+    """Loop/trim a generated clip to the narration length, normalised to 1080x1920@FPS, no audio."""
+    if out.exists() and not force:
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    _run(["ffmpeg", "-y", "-v", "error", "-stream_loop", "-1", "-i", str(src), "-t", f"{seconds:.3f}", "-an",
+          "-vf", f"scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps={FPS},format=yuv420p",
+          "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", str(out)])
+    return out
+
+
+def xi_broll(scene: dict, seconds: float, out: Path, force: bool = False) -> Path | None:
+    """Real AI video b-roll (Veo via the ElevenLabs flows API). Returns None if generation fails."""
+    from . import xi_media
+    raw = out.with_name(out.stem + "_raw.mp4")
+    if force or not raw.exists():
+        prompt = scene.get("visual_prompt") or scene.get("image_prompt") or ""
+        if scene.get("type") == "presenter_overlay":
+            prompt = "Topic footage only, no presenter, no person talking to camera, no split-screen: " + prompt
+        prompt += (". Vertical 9:16 phone-video framing, photorealistic, sharp, cinematic lighting, smooth camera move, "
+                   "no on-screen text, no captions, no subtitles, no watermark, no logos.")
+        try:
+            xi_media.generate_video(prompt, raw)
+        except Exception as e:  # noqa: BLE001
+            print(f"[render]   {e} - falling back to image b-roll", file=sys.stderr)
+            return None
+    return fit_clip(raw, out, seconds, force)
+
+
 def zoompan(image: Path, out: Path, seconds: float, force: bool = False) -> Path:
     if out.exists() and not force:
         return out
@@ -188,6 +224,39 @@ def zoompan(image: Path, out: Path, seconds: float, force: bool = False) -> Path
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(image), "-vf", vf, "-frames:v", str(frames),
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", str(out)])
     return out
+
+
+def face_still(face: Path, out: Path) -> Path:
+    """One clean frame of the owner (from assets/me/video or a photo) for image-driven talking-head models."""
+    if out.exists():
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    src = ["-ss", config.env("FACE_STILL_SEC", "1.0"), "-i", str(face)] if face.suffix.lower() in VIDEO_EXT else ["-i", str(face)]
+    _run(["ffmpeg", "-y", "-v", "error", *src, "-frames:v", "1", "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920", str(out)])
+    return out
+
+
+def talking(face: Path, audio: Path, out: Path, force: bool = False) -> Path:
+    """Lip-synced presenter clip: ElevenLabs creatify-aurora (sharp, credits) by default when the key is set,
+    else / on failure local Wav2Lip (free, CPU)."""
+    if out.exists() and not force:
+        return out
+    provider = config.env("PRESENTER_PROVIDER", "elevenlabs" if config.env("ELEVENLABS_API_KEY") else "wav2lip").lower()
+    if provider == "elevenlabs":
+        from . import xi_media
+        raw = out.with_name(out.stem + "_xi.mp4")
+        try:
+            t0 = time.time()
+            if force or not raw.exists():
+                xi_media.generate_talking(face_still(face, out.parent / "face_still.png"), audio, raw)
+            _run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-i", str(audio), "-map", "0:v", "-map", "1:a",
+                  "-vf", f"scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps={FPS},format=yuv420p",
+                  "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-c:a", "aac", "-b:a", "192k", "-shortest", str(out)])
+            print(f"[render]   elevenlabs talking {out.name} ({time.time() - t0:.0f}s)")
+            return out
+        except Exception as e:  # noqa: BLE001
+            print(f"[render]   {e} - falling back to Wav2Lip", file=sys.stderr)
+    return wav2lip(face, audio, out, force)
 
 
 def overlay(background: Path, face_clip: Path, out: Path, force: bool = False) -> Path:
@@ -210,7 +279,8 @@ def render(project: Path, force: bool = False) -> Path:
     clips, frames, build = project / "clips", project / "frames", project / "build"
     for d in (clips, frames, build):
         d.mkdir(exist_ok=True)
-    print(f"[render] face source: {face.name}; {len(script['scenes'])} scenes")
+    video_provider = config.env("VIDEO_PROVIDER", "elevenlabs" if config.env("ELEVENLABS_API_KEY") else "none").lower()
+    print(f"[render] face source: {face.name}; {len(script['scenes'])} scenes; b-roll video: {video_provider}")
 
     for s in script["scenes"]:
         sid = s["id"]
@@ -222,21 +292,23 @@ def render(project: Path, force: bool = False) -> Path:
         kind = s.get("type", "presenter")
         print(f"[render] scene {sid} ({kind}, {secs:.1f}s)")
         if kind == "presenter":
-            wav2lip(face, audio, out, force)
+            talking(face, audio, out, force)
             continue
-        frame = gemini_image(s.get("image_prompt") or s["visual_prompt"], frames / f"scene_{sid}.png", force, brief, s)
-        bg = zoompan(frame, build / f"bg_{sid}.mp4", secs, force)
+        bg = xi_broll(s, secs, build / f"bg_{sid}.mp4", force) if video_provider == "elevenlabs" else None
+        if bg is None:
+            frame = gemini_image(s.get("image_prompt") or s["visual_prompt"], frames / f"scene_{sid}.png", force, brief, s)
+            bg = zoompan(frame, build / f"bg_{sid}.mp4", secs, force)
         if kind == "broll":
             if force or not out.exists():
                 _run(["ffmpeg", "-y", "-v", "error", "-i", str(bg), "-c", "copy", str(out)])
         else:
-            talk = wav2lip(face, audio, build / f"talk_{sid}.mp4", force)
+            talk = talking(face, audio, build / f"talk_{sid}.mp4", force)
             overlay(bg, talk, out, force)
 
     cta_audio = script.get("cta_audio_file")
     if cta_audio and (project / cta_audio).exists():
         print("[render] cta")
-        wav2lip(face, project / cta_audio, clips / "cta.mp4", force)
+        talking(face, project / cta_audio, clips / "cta.mp4", force)
 
     tl = project / "timeline.json"
     if not tl.exists():
