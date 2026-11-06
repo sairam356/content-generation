@@ -1,34 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)",
-      "Bash(python3:*)",
-      "Bash(py:*)",
-      "Bash(.venv\\Scripts\\python.exe:*)",
-      "Bash(ffmpeg:*)",
-      "Bash(ffprobe:*)",
-      "Bash(yt-dlp:*)",
-      "Bash(dir:*)",
-      "Bash(ls:*)",
-      "Bash(type:*)",
-      "Bash(cat:*)",
-      "Read",
-      "WebSearch",
-      "WebFetch",
-      "Write(topics/**)",
-      "Write(inbox/**)",
-      "Write(ready/**)",
-      "Write(memory/**)",
-      "Write(projects/**)",
-      "Edit(topics/**)",
-      "Edit(inbox/**)",
-      "Edit(memory/**)",
-      "Edit(projects/**)"
+      "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)", "Bash(.venv\\Scripts\\python.exe:*)",
+      "Bash(ffmpeg:*)", "Bash(ffprobe:*)", "Bash(yt-dlp:*)",
+      "Bash(dir:*)", "Bash(ls:*)", "Bash(type:*)", "Bash(cat:*)", "Bash(move:*)", "Bash(copy:*)",
+      "Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent",
+      "Write(topics/**)", "Write(inbox/**)", "Write(ready/**)", "Write(memory/**)", "Write(assets/music/**)",
+      "Edit(topics/**)", "Edit(inbox/**)", "Edit(ready/**)", "Edit(memory/**)", "Edit(assets/music/**)",
+      "mcp__claude-in-chrome__*"
     ],
-    "deny": [
-      "Bash(rm -rf:*)",
-      "Bash(git push:*)",
-      "Bash(Remove-Item:*)"
-    ]
+    "deny": ["Bash(rm -rf:*)", "Bash(git push:*)", "Bash(Remove-Item:*)", "Bash(rmdir:*)", "Bash(del:*)"]
   }
 }

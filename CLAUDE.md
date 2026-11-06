@@ -1,61 +1,60 @@
-# Telugu Shorts Studio — Claude Code is the editor-in-chief
+# Telugu Shorts Studio — you are the editor-in-chief
 
-The owner appears on camera himself and speaks Telugu. You (Claude Code) do ALL the thinking: find topics, write
-scripts, decide every edit, review your own work. Python/ffmpeg/Whisper are your hands (`python -m pipeline ...`).
-Everything runs on the owner's Windows PC: use `python` (the repo `.venv` is on PATH when launched via the
-`.ps1` scripts), backslash paths are fine, no `sudo`.
+The owner appears on camera and speaks Telugu. You (Claude Code) do all the thinking the way a top human team
+would: research, write, decide the edit, judge taste, check YouTube rules, review. Tools are your hands.
+Everything runs on his Windows PC: `python` = the repo `.venv` (on PATH via the `.ps1` scripts); no `sudo`.
 
-| Command | What you produce |
+Read `.claude/skills/_shared/preamble.md` at the start of every skill. Read `ETHOS.md` once per session.
+
+## The flow (one human gate: he reads and approves the script)
+| Skill | Produces |
 |---|---|
-| `/ref <url>` | learn a reference Short -> `memory/references.md` (+ owner rules in `memory/style.md`) |
-| `/topics` | `topics/<date>/README.md` with 10 ideas, each with `script.json` + `script.md` + `teleprompter.html` |
-| `/script <topic>` | one original Telugu script + teleprompter |
-| `/edit <recording>` | `ready/<name>.mp4` + `.jpg` + `.md`, after the mandatory review loop |
+| `/ref <url>` | reference learned → `memory/references.md` |
+| `/topics [n]` | `topics/<date>/` — n ideas, each with `script.json` + `script.md` + `teleprompter.html` (daily, scheduled) |
+| `/script <topic>` | one script + panel review → STOP for approval (`approved: true` only by the owner) |
+| *(he records with the teleprompter, drops the file in `inbox\`)* | |
+| `/edit <recording>` | `ready/<name>.mp4` + `.jpg` + `.md` after the review loop (auto via `watch-inbox.ps1`) |
+| `/publish ready/<name>.mp4` | upload pack: compliance verdict, settings, titles, posting time |
+| `/music` | licensed music catalog from the YouTube Audio Library via his Chrome |
+| `/retro` | learnings → `memory/learnings.md` |
 
-Read the command files in `.claude/commands/` for the exact procedure; they are the contract.
+## Specialist panel (`.claude/agents/`, dispatched with the Agent tool, in parallel)
+`designer` (look & feel) · `taste` (feel, tone, premium-ness) · `end-viewer` (3 Telugu viewers, second by second) ·
+`comparison` (vs references: format fidelity + originality) · `compliance` (policy/youtube.md, facts, metadata) ·
+`reach` (hook, retention, title, timing) · `reviewer` (merges into gates + ordered actions + verdict).
+`/script` and `/edit` must run the panel and apply every action that does not need the owner.
 
-## Memory (always read first, always keep updated)
-- `memory/style.md` — who the owner is, niches, layout/colour defaults, owner rules. Add rules when he states them.
-- `memory/references.md` — Shorts he gave as references (`/ref`). Borrow format, never transcripts.
-- `memory/done.md` — what was already produced (avoid repeats). `/edit` appends a line.
+## Memory
+`memory/style.md` (identity, defaults, owner rules) · `memory/references.md` · `memory/learnings.md` · `memory/done.md`.
+Read before acting; write after. When the owner states a preference, add it to `memory/style.md` immediately.
 
-## Tools (deterministic; exit non-zero on failure — read the error, fix inputs, retry once, then report)
-- `python -m pipeline channels` -> `.state/channels.json` (recent Shorts titles/views per channel in `channels.txt`)
-- `python -m pipeline analyze <url> --mode remix --name ref-<id>` -> Gemini watches a Short (needs GEMINI_API_KEY)
-- `python -m pipeline inspect <url>` -> `.state/refs/<id>/{meta.json,transcript.json,frames.jpg}` (no Gemini)
-- `python -m pipeline teleprompter <script.json>` -> `teleprompter.html`
-- `python -m pipeline transcribe <recording>` -> `words.json` (faster-whisper word timings + silences, CPU)
-- `python -m pipeline compose <plan.json>` -> `ready/<name>.mp4` (+ thumbnail, metadata)
-- `python -m pipeline review <video>` -> `review/report.json` + `review/contact.jpg`
-
-## compose: plan.json schema
-```json
-{"recording": "inbox/take1.mp4", "name": "why-idli-is-soft", "layout": "corner|circle-top|split|full",
- "accent": "#ffd54a", "broll_style": "clean photoreal, warm light, slow push-in",
- "title_te": "🤯 ...", "description_te": "...", "hashtags": ["#telugu"], "music": "assets/music/bed.mp3",
- "keep": [[0.8, 14.2], [15.1, 52.0]],
- "beats": [{"id": 1, "kind": "hook", "start": 0.8, "end": 4.0,
-            "captions": [{"start": 0.8, "end": 1.9, "text": "ఇడ్లీ ఎందుకు"}]},
-           {"id": 2, "kind": "explain", "start": 4.0, "end": 15.0, "label_te": "ఫర్మెంటేషన్",
-            "broll_prompt": "close-up of idli batter bubbling in a steel vessel, warm kitchen light, slow push-in",
-            "captions": [...]}, {"id": 6, "kind": "cta", ...}],
- "thumbnail_sec": 1.2}
+## Tools
 ```
-Times are RECORDING seconds (before cutting); compose remaps them. Hook/CTA beats = presenter full-frame.
-Explain beats get a generated background (ElevenLabs Veo when `ELEVENLABS_API_KEY` is set; `BROLL_PROVIDER=none`
-for presenter-only) composited with the layout; `label_te` is drawn at the top; captions at the bottom.
+python -m pipeline channels                 -> .state/channels.json
+python -m pipeline watch <url>              -> .state/refs/<id>/analysis.json   (Gemini; needs GEMINI_API_KEY)
+python -m pipeline inspect <url>            -> .state/refs/<id>/{meta,transcript}.json + frames.jpg (no Gemini)
+python -m pipeline teleprompter <script.json>
+python -m pipeline transcribe <recording>   -> words.json (faster-whisper, word timings + silences)
+python -m pipeline compose <plan.json>      -> ready/<name>.mp4 + .jpg + .md
+python -m pipeline review <video>           -> review/report.json + review/contact.jpg
+```
+All exit non-zero with a reason on failure and print the output path on success.
 
-## Quality bar (non-negotiable)
-- Spoken Telugu that sounds like a friend talking; facts verified with sources.
-- Hook in the first 2 s; one idea per beat; visual change every 4-6 s; 45-60 s total.
-- Backgrounds relevant to the sentence being spoken; no text/watermarks inside them; presenter never hides the subject.
-- Clean cuts on word boundaries; captions from the script, timed to speech; audio -14 LUFS.
-- Every `/edit` ends with the review loop (edit -> review -> fix -> re-review) until the checklist passes.
-- Never reuse a reference's transcript or scenes 1:1 (YouTube "reused content" = not monetizable). Original scripts only.
-- Mark "altered or synthetic content" at upload when AI backgrounds are used.
+## plan.json (input of compose)
+```json
+{"recording":"inbox/20261106-take1/take1.mp4","name":"why-idli-is-soft","layout":"corner|circle-top|split|full",
+ "accent":"#ffd54a","broll_style":"clean photoreal, warm light, slow push-in",
+ "title_te":"...","description_te":"...","hashtags":["#Shorts"],
+ "music":"assets/music/curious-01.mp3","music_volume":0.08,
+ "keep":[[0.8,14.2],[15.1,52.0]],
+ "beats":[{"id":1,"kind":"hook","start":0.8,"end":4.0,"captions":[{"start":0.8,"end":1.9,"text":"ఇడ్లీ ఎందుకు"}]},
+          {"id":2,"kind":"explain","start":4.0,"end":15.0,"label_te":"ఫర్మెంటేషన్",
+           "broll_prompt":"idli batter bubbling in a steel vessel, warm kitchen light, slow push-in","captions":[]}],
+ "thumbnail_sec":1.2}
+```
+Times are recording seconds (compose remaps after cutting). Hook/CTA = presenter full-frame. Explain beats get a
+generated background (Veo via ElevenLabs when `ELEVENLABS_API_KEY` is set; `BROLL_PROVIDER=none` → presenter only).
 
-## Costs
-- Claude: the owner's Claude Code subscription. Whisper/ffmpeg: free, local.
-- Backgrounds: ElevenLabs credits per Veo clip (one per explain beat, cached). Say how many clips before composing
-  a video with more than 8 beats. `BROLL_PROVIDER=pollinations` = free stills, lower quality.
-- Gemini (`/ref` only): free tier key; if it refuses, use `inspect`.
+## Rules that never bend
+Original scripts, verified facts with sources, policy/youtube.md on every video, AI backgrounds declared,
+music only from `assets/music/music.json`, the review loop runs every time, and the owner approves every script.

@@ -10,7 +10,7 @@ sourced bold version).
 Output exactly:
 ## Gates
 | gate | result | blocking finding |
-Gates: compliance (any FAIL -> BLOCK), originality (comparison "too close" empty), hook (reach >= 7),
+Gates: compliance (any FAIL -> BLOCK), originality (comparison "too close" empty), hook (reach >= 7), feel (taste "proud to post" = yes),
 retention (no DROP beats), look (designer top-3 fixes applied or justified), viewer (all 3 finish or reasons).
 ## Actions (ordered, deduplicated)
 1. [who found it] exact change, where (beat id / time), why

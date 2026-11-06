@@ -2,18 +2,11 @@
 .venv/
 __pycache__/
 *.pyc
-projects/*
-!projects/.gitkeep
-assets/me/photos/*
-assets/me/voice/*
-!assets/me/photos/.gitkeep
-!assets/me/voice/.gitkeep
 .state/
 *.mp4
 *.mp3
 *.wav
 *.log
-tools/
 inbox/
 ready/
 topics/
@@ -21,3 +14,6 @@ topics/
 *.jpg
 *.png
 !assets/**/*.png
+assets/music/*
+!assets/music/.gitkeep
+!assets/music/music.example.json
