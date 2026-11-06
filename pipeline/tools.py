@@ -291,7 +291,7 @@ def _presenter_segment(cut: Path, start: float, end: float, out: Path) -> Path:
     return out
 
 
-def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str) -> Path:
+def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: float) -> Path:
     """Composite presenter over/beside the background according to the layout template."""
     acc = accent.lstrip("#")
     if layout == "corner":
@@ -309,7 +309,7 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str) -> Path:
     else:
         return pres
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(bg), "-i", str(pres), "-filter_complex", fc, "-r", str(FPS),
-          "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
+          "-t", f"{seconds:.3f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
     return out
 
 
@@ -354,12 +354,13 @@ def compose(plan_path: Path) -> Path:
         if bg is None:
             clips.append(pres)
             continue
-        clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent))
+        clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s))
 
     lst = work / "concat.txt"
     lst.write_text("".join(f"file '{c.resolve().as_posix()}'\n" for c in clips), encoding="utf-8")
     joined = work / "joined.mp4"
-    _run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(joined)])
+    _run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst), "-r", str(FPS),
+          "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-pix_fmt", "yuv420p", str(joined)])
 
     # captions + title card + beat labels as one ASS file
     font = config.env("SUBTITLE_FONT", "Nirmala UI")
