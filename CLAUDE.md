@@ -22,8 +22,9 @@ Read `.claude/skills/_shared/preamble.md` at the start of every skill. Read `ETH
 | `/retro` | learnings → `memory/learnings.md` |
 
 ## Models
-Generation (`/topics`, `/script`, `/edit`, `/publish`) runs on Opus at high effort (`.claude/settings.json`). The specialist
-agents are planners/reviewers and run on Sonnet (fast); if Sonnet is unavailable they fall back to Opus.
+Generation (`/topics`, `/script`, `/edit`, `/publish`) runs on Opus (claude-opus-5-5) at high effort (`.claude/settings.json`).
+Specialist agents (planning/review) run on Fable (`model: fable` = claude-fable-5-1). If an Agent call fails because Fable is
+unavailable, re-dispatch it with `model: opus`.
 
 ## Specialist panel (`.claude/agents/`, dispatched with the Agent tool, in parallel)
 `designer` (look & feel) · `taste` (feel, tone, premium-ness) · `end-viewer` (3 Telugu viewers, second by second) ·
