@@ -9,6 +9,7 @@ Read `.claude/skills/_shared/preamble.md` at the start of every skill. Read `ETH
 ## The flow (one human gate: he reads and approves the script)
 | Skill | Produces |
 |---|---|
+| `/scout <url>` | he saw a viral video → verdict: make it? our angle? compliance flags → reference stored |
 | `/ref <url>` | reference learned → `memory/references.md` |
 | `/topics [n]` | `topics/<date>/` — n ideas, each with `script.json` + `script.md` + `teleprompter.html` (daily, scheduled) |
 | `/script <topic>` | one script + panel review → STOP for approval (`approved: true` only by the owner) |
