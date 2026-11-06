@@ -24,18 +24,22 @@ $env:Path = "$Root\.venv\Scripts;$env:Path"
 
 New-Item -ItemType Directory -Force -Path ".state", "ready" | Out-Null
 
-if (-not $Recording) {
-  $sample = Get-ChildItem "inbox\samples" -File -ErrorAction SilentlyContinue |
+if ($Recording) {
+  $recordings = @($Recording)
+} else {
+  $recordings = @(Get-ChildItem "inbox\samples" -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Extension -match '^\.(mp4|mov|mkv|m4v|webm)$' } |
-    Select-Object -First 1
-  if (-not $sample) {
+    Select-Object -First $Count | ForEach-Object { $_.FullName })
+  if (-not $recordings) {
     throw "No sample recording found in inbox\samples."
   }
-  $Recording = $sample.FullName
 }
 
+$results = @()
+foreach ($Recording in $recordings) {
 $before = Get-Date
 $log = ".state\e2e-test-$(Get-Date -Format yyyyMMdd-HHmmss).log"
+# The prompt MUST start with "/edit" at column 1, otherwise Claude Code does not treat it as a skill call.
 $prompt = @"
 /edit "$Recording" --no-script --layout $Layout
 
