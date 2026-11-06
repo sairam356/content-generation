@@ -24,7 +24,7 @@ VOICE_SETTINGS = {
     "similarity_boost": 0.85,
     "style": 0.35,
     "use_speaker_boost": True,
-    "speed": 1.0,
+    "speed": float(config.env("VOICE_SPEED", "1.1")),   # 0.7-1.2; the reference channel talks fast
 }
 
 # ffmpeg mastering chains. "deep" = broadcast presenter: gentle low-end lift (chest), presence bump,
@@ -175,6 +175,22 @@ def duration(path: Path) -> float:
     return float(out)
 
 
+def fit_to_budget(wav: Path, planned_sec: float, slack: float = 1.25, max_tempo: float = 1.2) -> float:
+    """If narration overruns its planned clip length by more than `slack`, speed it up a little (<= max_tempo)
+    so the pacing stays close to the reference Short. Returns the final duration."""
+    secs = duration(wav)
+    limit = planned_sec * slack
+    if secs <= limit or planned_sec <= 0:
+        return secs
+    tempo = min(secs / limit, max_tempo)
+    tmp = wav.with_suffix(".fit.wav")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-af", f"atempo={tempo:.3f}",
+                    "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(tmp)], check=True)
+    tmp.replace(wav)
+    print(f"[voice]   {wav.name}: {secs:.1f}s > {limit:.1f}s budget -> tempo x{tempo:.2f}")
+    return duration(wav)
+
+
 def tts_project(project: Path, voice_id: str | None = None, preset: str | None = None, force: bool = False) -> None:
     brief = json.loads((project / "brief.json").read_text(encoding="utf-8"))
     scenes = brief["script"]["scenes"]
@@ -190,7 +206,7 @@ def tts_project(project: Path, voice_id: str | None = None, preset: str | None =
             synthesize(scene["narration_te"], out, voice_id=voice_id, preset=preset,
                        previous_text=texts[i - 1] if i else None,
                        next_text=texts[i + 1] if i + 1 < len(texts) else None)
-        secs = duration(out)
+        secs = fit_to_budget(out, float(scene.get("duration_sec", 10)))
         scene["audio_file"] = f"audio/{out.name}"
         scene["audio_duration_sec"] = round(secs, 2)
         # Video models render 5 or 10 second clips; pick the smallest that covers the narration.

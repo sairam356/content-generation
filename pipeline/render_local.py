@@ -81,7 +81,13 @@ def _pollinations_image(prompt: str, out: Path) -> Path | None:
                                      "seed": 11 + attempt}, timeout=180)
             if r.status_code == 200 and r.headers.get("content-type", "").startswith("image/"):
                 out.parent.mkdir(parents=True, exist_ok=True)
-                out.write_bytes(r.content)
+                raw = out.with_suffix(".raw.jpg")
+                raw.write_bytes(r.content)
+                # crop the service's bottom-right watermark strip, then back to 1080x1920
+                subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-vf",
+                                "crop=iw:ih*0.93:0:0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920",
+                                str(out)], check=True)
+                raw.unlink(missing_ok=True)
                 return out
             print(f"[render]   pollinations attempt {attempt + 1}: HTTP {r.status_code}", file=sys.stderr)
         except Exception as e:  # noqa: BLE001
@@ -123,8 +129,11 @@ def _reference_frame(brief: dict, scene: dict, out: Path) -> Path | None:
 def gemini_image(prompt: str, out: Path, force: bool = False, brief: dict | None = None, scene: dict | None = None) -> Path:
     if out.exists() and not force:
         return out
+    if scene and scene.get("type") == "presenter_overlay":
+        prompt = ("Full-frame shot of the topic only (the presenter is composited separately, so NO person, NO face, "
+                  "no split-screen): " + prompt)
     full = (f"{prompt}. Vertical 9:16 composition, photorealistic, sharp, high detail, cinematic lighting, "
-            "no text, no captions, no watermark, no logos.")
+            "no text, no captions, no watermark, no logos, no close-up human faces.")
     provider = config.env("IMAGE_PROVIDER", "gemini").lower()
     last = None
     if provider == "gemini":

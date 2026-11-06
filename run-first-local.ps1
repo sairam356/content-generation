@@ -11,7 +11,8 @@ param(
   [string]$Project = "projects\meal-maker",
   [string]$Video,
   [string]$VoiceId,
-  [string]$FallbackVoiceId = "ge94MQm6fYaUCnxz1us6"   # "Srinu" - stock Telugu male voice
+  [string]$FallbackVoiceId = "ge94MQm6fYaUCnxz1us6",  # "Srinu" - stock Telugu male voice
+  [switch]$Reanalyze                                   # redo the Gemini analysis/script and every clip
 )
 
 $ErrorActionPreference = "Stop"
@@ -58,6 +59,14 @@ if (-not $VoiceId) {
 }
 
 Write-Host "`n== ElevenLabs: Telugu narration (voice $VoiceId) ==" -ForegroundColor Yellow
+if ($Reanalyze) {
+  $Url = (Get-Content (Join-Path $Project "brief.json") -Raw -Encoding UTF8 | ConvertFrom-Json).source_url
+  $ProjName = Split-Path -Leaf $Project
+  foreach ($d in "audio", "frames", "clips", "build") { Remove-Item -Recurse -Force (Join-Path $Project $d) -ErrorAction SilentlyContinue }
+  Remove-Item -Force (Join-Path $Project "timeline.json"), (Join-Path $Project "final.mp4") -ErrorAction SilentlyContinue
+  & $Py -m pipeline analyze $Url --name $ProjName
+  if ($LASTEXITCODE -ne 0) { throw "analyze failed" }
+}
 & $Py -m pipeline tts $Project --voice-id $VoiceId
 if ($LASTEXITCODE -ne 0) { throw "TTS failed" }
 

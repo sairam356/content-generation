@@ -7,6 +7,7 @@ Gemini accepts a public YouTube URL directly, so nothing is downloaded. Two call
 Output: projects/<slug>/brief.json  (+ brief.md, script_te.txt, claude_prompt.md)
 """
 import json
+import re
 import sys
 import time
 from datetime import date
@@ -210,6 +211,63 @@ def analyze_video(url: str, model: str) -> dict:
     return _generate(client, model, [video_part, ANALYSIS_PROMPT], ANALYSIS_SCHEMA)
 
 
+WORDS_PER_SEC = 2.3          # measured Telugu narration speed
+MAX_SCENE_WORDS = 24         # one 10s clip
+
+
+def reference_duration(url: str) -> int | None:
+    """Real length of the reference Short (yt-dlp metadata) so the Telugu script keeps the same pacing."""
+    import subprocess
+    import sys as _sys
+    for cmd in (["yt-dlp"], [_sys.executable, "-m", "yt_dlp"]):
+        try:
+            r = subprocess.run(cmd + ["--no-warnings", "--print", "duration", url], capture_output=True, text=True, timeout=60)
+            if r.returncode == 0 and r.stdout.strip():
+                return int(float(r.stdout.strip().splitlines()[-1]))
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
+def split_long_scenes(scenes: list[dict]) -> list[dict]:
+    """Gemini regularly ignores the word budget. Split any scene longer than one 10s clip into several
+    consecutive scenes (same type/visual) at sentence/clause boundaries so every b-roll image lasts <= ~10s."""
+    out: list[dict] = []
+    for s in scenes:
+        words = s["narration_te"].split()
+        if len(words) <= MAX_SCENE_WORDS + 2:
+            out.append(s)
+            continue
+        parts = [x.strip() for x in re.split(r"(?<=[.!?।])\s+|(?<=,)\s+", s["narration_te"]) if x.strip()]
+        chunks, cur = [], ""
+        for part in parts:
+            if cur and len((cur + " " + part).split()) > MAX_SCENE_WORDS:
+                chunks.append(cur)
+                cur = part
+            else:
+                cur = (cur + " " + part).strip()
+        if cur:
+            chunks.append(cur)
+        final = []
+        for c in chunks:  # hard cap: a single run-on sentence is cut by words
+            w = c.split()
+            while len(w) > MAX_SCENE_WORDS + 4:
+                final.append(" ".join(w[:MAX_SCENE_WORDS])); w = w[MAX_SCENE_WORDS:]
+            final.append(" ".join(w))
+        for i, c in enumerate(final):
+            n = dict(s)
+            n["narration_te"] = c
+            n["duration_sec"] = 5 if len(c.split()) <= 12 else 10
+            if i:
+                n["on_screen_text_te"] = ""
+                n["image_prompt"] = (s.get("image_prompt") or s.get("visual_prompt", "")) + f" (alternate angle {i + 1}, same scene, same colours)"
+                n["narration_en"] = ""
+            out.append(n)
+    for i, s in enumerate(out, 1):
+        s["id"] = i
+    return out
+
+
 def write_telugu_script(analysis: dict, model: str, target_sec: int, mode: str = "replicate") -> dict:
     client = _client()
     tmpl = REPLICATE_PROMPT if mode == "replicate" else SCRIPT_PROMPT
@@ -217,6 +275,11 @@ def write_telugu_script(analysis: dict, model: str, target_sec: int, mode: str =
     script = _generate(client, model, prompt, SCRIPT_SCHEMA)
     for s in script["scenes"]:
         s["duration_sec"] = 10 if s.get("duration_sec", 5) > 5 else 5
+    before = len(script["scenes"])
+    script["scenes"] = split_long_scenes(script["scenes"])
+    if len(script["scenes"]) != before:
+        print(f"[analyze] split {before} -> {len(script['scenes'])} scenes to respect the 10s clip budget")
+    script["total_duration_sec"] = int(sum(len(s["narration_te"].split()) for s in script["scenes"]) / WORDS_PER_SEC)
     return script
 
 
@@ -266,11 +329,15 @@ Show me the cost estimate before the first paid generation.
 
 def run(url: str, name: str | None = None, target_sec: int | None = None, mode: str | None = None) -> Path:
     model = config.env("GEMINI_MODEL", "gemini-flash-latest")
-    target_sec = target_sec or int(config.env("TARGET_DURATION_SEC", "45"))
+    ref_sec = reference_duration(url)
+    if not target_sec:
+        target_sec = ref_sec or int(config.env("TARGET_DURATION_SEC", "45"))
+    print(f"[analyze] reference length: {ref_sec or '?'}s -> narration budget {target_sec}s")
     mode = mode or config.env("SCRIPT_MODE", "replicate")
     vid = config.youtube_id(url)
     print(f"[analyze] watching {url} with {model} ...")
     analysis = analyze_video(url, model)
+    analysis["duration_sec"] = ref_sec
     print(f"[analyze] concept: {analysis['core_concept']}")
     print(f"[analyze] writing Telugu script ({mode}) ...")
     script = write_telugu_script(analysis, model, target_sec, mode)
