@@ -175,27 +175,38 @@ TELEPROMPTER_HTML = """<!doctype html><html lang="te"><head><meta charset="utf-8
  .mirror #txt{{transform:scaleX(-1)}} .mirror #line{{transform:scaleX(-1)}}
  @media(max-width:650px){{#bar{{padding:9px 12px}}#bar b{{display:none}}#controls{{bottom:8px;width:calc(100% - 16px);justify-content:center}}button{{padding:9px 10px}}#txt{{width:96vw;padding-left:3vw;padding-right:3vw}}}}
 </style></head><body>
-<div id="bar"><b>{title}</b><span>Space play · ↑/↓ speed · R restart · M mirror · +/- size</span><span id="st">Paused · <span id="sp">{speed}</span> px/s</span></div>
+<div id="bar"><b>{title}</b><span>Space play · L listen · ↑/↓ speed · R restart · M mirror · +/- size</span><span id="st">Paused · <span id="sp">{speed}</span> px/s</span></div>
 <div id="line"></div>
 <main id="txt" dir="auto">{body}</main>
-<nav id="controls"><button id="restart">Restart</button><button id="slower">Slower</button><button id="play">Start</button><button id="faster">Faster</button><button id="mirror">Mirror</button><button id="full">Full screen</button></nav>
+<nav id="controls"><button id="restart">Restart</button><button id="listen">Listen</button><button id="slower">Slower</button><button id="play">Start</button><button id="faster">Faster</button><button id="mirror">Mirror</button><button id="full">Full screen</button></nav>
 <script>
  let speed={speed},run=false,y=0,last=null,txt=document.getElementById('txt'),fs={size};
- const play=document.getElementById('play'),sp=document.getElementById('sp'),st=document.getElementById('st');
+ const play=document.getElementById('play'),listen=document.getElementById('listen'),sp=document.getElementById('sp'),st=document.getElementById('st');
  function status(){{play.textContent=run?'Pause':'Start';sp.textContent=speed;st.firstChild.textContent=(run?'Running':'Paused')+' · ';}}
  function toggle(){{run=!run;status()}}
- function restart(){{y=0;window.scrollTo(0,0);run=false;status()}}
+ function restart(){{y=0;window.scrollTo(0,0);run=false;speechSynthesis.cancel();listen.textContent='Listen';status()}}
+ function scriptText(){{return [...document.querySelectorAll('.beat')].map(p=>{{const q=p.cloneNode(true);q.querySelectorAll('.cue').forEach(x=>x.remove());return q.textContent.trim()}}).join('. ')}}
+ function speak(){{
+  if(speechSynthesis.speaking){{speechSynthesis.cancel();listen.textContent='Listen';return}}
+  const u=new SpeechSynthesisUtterance(scriptText()),voices=speechSynthesis.getVoices();
+  u.lang='te-IN';u.rate=.9;u.pitch=1;
+  u.voice=voices.find(v=>v.lang.toLowerCase().startsWith('te'))||null;
+  u.onstart=()=>{{listen.textContent='Stop audio';st.firstChild.textContent=(u.voice?'Listening':'Listening (default voice)')+' · '}};
+  u.onend=u.onerror=()=>{{listen.textContent='Listen';status()}};
+  speechSynthesis.speak(u);
+ }}
  function step(t){{ if(run){{ if(last!==null){{ y+= speed*(t-last)/1000; window.scrollTo(0,y);}} last=t; }} else last=null; requestAnimationFrame(step);}}
  requestAnimationFrame(step);
  document.addEventListener('keydown',e=>{{
   if(e.code==='Space'){{toggle();e.preventDefault();}}
+  if(e.key==='l'||e.key==='L'){{speak();}}
   if(e.code==='ArrowUp'){{speed+=10;}} if(e.code==='ArrowDown'){{speed=Math.max(10,speed-10);}}
   if(e.key==='r'||e.key==='R'){{restart();}}
   if(e.key==='m'||e.key==='M'){{document.body.classList.toggle('mirror');}}
   if(e.key==='+'||e.key==='='){{fs+=4;txt.style.fontSize=fs+'px';}} if(e.key==='-'){{fs=Math.max(24,fs-4);txt.style.fontSize=fs+'px';}}
   status();
  }});
- play.onclick=toggle; document.getElementById('restart').onclick=restart;
+ play.onclick=toggle; listen.onclick=speak; document.getElementById('restart').onclick=restart;
  document.getElementById('slower').onclick=()=>{{speed=Math.max(10,speed-10);status()}};
  document.getElementById('faster').onclick=()=>{{speed+=10;status()}};
  document.getElementById('mirror').onclick=()=>document.body.classList.toggle('mirror');
