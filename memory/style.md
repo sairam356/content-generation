@@ -2,7 +2,7 @@
 
 ## Identity
 - Presenter: the owner himself, on camera, speaking Telugu. No avatars, no voice clones.
-- Niches: facts, everyday problems, food, daily habits, tech, inventions, India-focused, inspiration stories, K-culture.
+- Niches: facts (Telugu facts channels are the core inspiration: Fact maze, FactstubE, Lokesh Facts, FactoPedia, True Facts, Lazy Proton; English: Zack D. Films, Fangs & Facts, Annu Facts 3D, information world, Info Hub; money: Mahesh Malle), everyday problems, food, daily habits, tech, inventions, India-focused, inspiration stories, K-culture.
 - Angles that work: funny, interesting, annoying, problematic, new inventions, new problems, silly India moments.
 
 ## Look (defaults - refine with /ref)

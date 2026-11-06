@@ -8,3 +8,5 @@
 - background / animation style, colours, caption style, music
 - pacing, why it works, what to borrow, what NOT to copy
 -->
+
+## Owner-shared Shorts (2026-11-06) — run `/scout <url>` on each to fill a full entry
