@@ -14,3 +14,10 @@ assets/me/voice/*
 *.wav
 *.log
 tools/
+inbox/
+ready/
+topics/
+*.ass
+*.jpg
+*.png
+!assets/**/*.png

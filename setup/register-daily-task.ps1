@@ -1,20 +1,29 @@
 <#
 .SYNOPSIS
-  Registers a Windows Task Scheduler job that briefs the newest Shorts from channels.txt every morning
-  (Gemini analysis + Telugu script only - no paid video generation). Review projects\ and run
-  .\run.ps1 -Project <folder> -SkipAnalyze for the ones you want to produce.
+  Windows Task Scheduler: every morning run daily-topics.ps1 (10 topics with scripts in topics\<date>\),
+  and optionally start watch-inbox.ps1 at logon (auto-edit anything dropped into inbox\).
 .EXAMPLE
-  .\setup\register-daily-task.ps1 -At 07:30
+  .\setup\register-daily-task.ps1 -At 07:30            # daily topics
+  .\setup\register-daily-task.ps1 -Watcher             # also start the inbox watcher at logon
   .\setup\register-daily-task.ps1 -Remove
 #>
-param([string]$At = "07:30", [switch]$Remove)
+param([string]$At = "07:30", [switch]$Watcher, [switch]$Remove)
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$Name = "TeluguShorts-DailyBriefs"
-if ($Remove) { Unregister-ScheduledTask -TaskName $Name -Confirm:$false; Write-Host "removed $Name"; exit }
-$Py = Join-Path $Root ".venv\Scripts\python.exe"
-if (-not (Test-Path $Py)) { $Py = "python" }
-$Action = New-ScheduledTaskAction -Execute $Py -Argument "-m pipeline daily" -WorkingDirectory $Root
-$Trigger = New-ScheduledTaskTrigger -Daily -At $At
-$Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 1)
-Register-ScheduledTask -TaskName $Name -Action $Action -Trigger $Trigger -Settings $Settings -Force | Out-Null
-Write-Host "Registered '$Name' daily at $At. Logs: run 'python -m pipeline daily' manually to see output."
+$T1 = "TeluguShorts-DailyTopics"; $T2 = "TeluguShorts-InboxWatcher"
+if ($Remove) {
+  foreach ($n in $T1, $T2) { Unregister-ScheduledTask -TaskName $n -Confirm:$false -ErrorAction SilentlyContinue }
+  Write-Host "removed"; exit
+}
+$ps = "powershell.exe"
+$a1 = New-ScheduledTaskAction -Execute $ps -Argument "-ExecutionPolicy Bypass -File `"$Root\daily-topics.ps1`"" -WorkingDirectory $Root
+$tr1 = New-ScheduledTaskTrigger -Daily -At $At
+$st = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+Register-ScheduledTask -TaskName $T1 -Action $a1 -Trigger $tr1 -Settings $st -Force | Out-Null
+Write-Host "Registered '$T1' daily at $At -> topics\<date>\README.md"
+if ($Watcher) {
+  $a2 = New-ScheduledTaskAction -Execute $ps -Argument "-ExecutionPolicy Bypass -File `"$Root\watch-inbox.ps1`"" -WorkingDirectory $Root
+  $tr2 = New-ScheduledTaskTrigger -AtLogOn
+  $st2 = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
+  Register-ScheduledTask -TaskName $T2 -Action $a2 -Trigger $tr2 -Settings $st2 -Force | Out-Null
+  Write-Host "Registered '$T2' at logon -> drop recordings into inbox\"
+}

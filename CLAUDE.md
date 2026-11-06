@@ -1,76 +1,61 @@
-# content-generation — Telugu AI-presenter Shorts
+# Telugu Shorts Studio — Claude Code is the editor-in-chief
 
-You (Claude Code) are the production step of this pipeline. Python has already done the thinking:
+The owner appears on camera himself and speaks Telugu. You (Claude Code) do ALL the thinking: find topics, write
+scripts, decide every edit, review your own work. Python/ffmpeg/Whisper are your hands (`python -m pipeline ...`).
+Everything runs on the owner's Windows PC: use `python` (the repo `.venv` is on PATH when launched via the
+`.ps1` scripts), backslash paths are fine, no `sudo`.
 
-| Step | Who | Output |
-|---|---|---|
-| 1. Understand the reference Short + write the Telugu scene script | `python -m pipeline analyze <url>` (Gemini) | `projects/<p>/brief.json` |
-| 2. Narration in the owner's cloned voice (Telugu, ElevenLabs eleven_v4) | `python -m pipeline tts <p>` | `projects/<p>/audio/scene_<id>.wav` |
-| **3. Generate the visuals with Higgsfield (your job)** | `/make-short projects/<p>` | `projects/<p>/clips/*.mp4`, `timeline.json` |
-| 4. Stitch + Telugu captions | `python -m pipeline assemble <p>` | `projects/<p>/final.mp4` |
+| Command | What you produce |
+|---|---|
+| `/ref <url>` | learn a reference Short -> `memory/references.md` (+ owner rules in `memory/style.md`) |
+| `/topics` | `topics/<date>/README.md` with 10 ideas, each with `script.json` + `script.md` + `teleprompter.html` |
+| `/script <topic>` | one original Telugu script + teleprompter |
+| `/edit <recording>` | `ready/<name>.mp4` + `.jpg` + `.md`, after the mandatory review loop |
 
-The owner's face photos live in `assets/me/photos/`. The owner's Soul ID (Higgsfield identity) is
-`HIGGSFIELD_SOUL_ID` in `.env` once trained. Everything runs on the owner's Windows PC: use
-PowerShell-compatible commands (`python`, not `python3`; paths with `\` are fine; no `sudo`).
+Read the command files in `.claude/commands/` for the exact procedure; they are the contract.
 
-## Two renderers
+## Memory (always read first, always keep updated)
+- `memory/style.md` — who the owner is, niches, layout/colour defaults, owner rules. Add rules when he states them.
+- `memory/references.md` — Shorts he gave as references (`/ref`). Borrow format, never transcripts.
+- `memory/done.md` — what was already produced (avoid repeats). `/edit` appends a line.
 
-- **Local (default, free)**: `python -m pipeline render projects/<p>` — Wav2Lip lip-syncs the owner's recorded
-  video (`assets/me/video/`) to the narration, b-roll frames come from Gemini image generation + ffmpeg zoom/pan,
-  `presenter_overlay` scenes composite the owner in the lower corner. No credits. You are not needed for this path.
-- **Higgsfield (paid)**: the `/make-short` workflow below, used with `run.ps1 -Renderer higgsfield`.
+## Tools (deterministic; exit non-zero on failure — read the error, fix inputs, retry once, then report)
+- `python -m pipeline channels` -> `.state/channels.json` (recent Shorts titles/views per channel in `channels.txt`)
+- `python -m pipeline analyze <url> --mode remix --name ref-<id>` -> Gemini watches a Short (needs GEMINI_API_KEY)
+- `python -m pipeline inspect <url>` -> `.state/refs/<id>/{meta.json,transcript.json,frames.jpg}` (no Gemini)
+- `python -m pipeline teleprompter <script.json>` -> `teleprompter.html`
+- `python -m pipeline transcribe <recording>` -> `words.json` (faster-whisper word timings + silences, CPU)
+- `python -m pipeline compose <plan.json>` -> `ready/<name>.mp4` (+ thumbnail, metadata)
+- `python -m pipeline review <video>` -> `review/report.json` + `review/contact.jpg`
 
-## Replicate mode (default)
+## compose: plan.json schema
+```json
+{"recording": "inbox/take1.mp4", "name": "why-idli-is-soft", "layout": "corner|circle-top|split|full",
+ "accent": "#ffd54a", "broll_style": "clean photoreal, warm light, slow push-in",
+ "title_te": "🤯 ...", "description_te": "...", "hashtags": ["#telugu"], "music": "assets/music/bed.mp3",
+ "keep": [[0.8, 14.2], [15.1, 52.0]],
+ "beats": [{"id": 1, "kind": "hook", "start": 0.8, "end": 4.0,
+            "captions": [{"start": 0.8, "end": 1.9, "text": "ఇడ్లీ ఎందుకు"}]},
+           {"id": 2, "kind": "explain", "start": 4.0, "end": 15.0, "label_te": "ఫర్మెంటేషన్",
+            "broll_prompt": "close-up of idli batter bubbling in a steel vessel, warm kitchen light, slow push-in",
+            "captions": [...]}, {"id": 6, "kind": "cta", ...}],
+ "thumbnail_sec": 1.2}
+```
+Times are RECORDING seconds (before cutting); compose remaps them. Hook/CTA beats = presenter full-frame.
+Explain beats get a generated background (ElevenLabs Veo when `ELEVENLABS_API_KEY` is set; `BROLL_PROVIDER=none`
+for presenter-only) composited with the layout; `label_te` is drawn at the top; captions at the bottom.
 
-`brief.json.mode == "replicate"` means the Short must look like the reference: reproduce each scene's framing,
-background, colours, props and camera move exactly as `visual_prompt` describes; only the presenter is the
-owner (Soul ID) and the audio is his Telugu narration. Do not restyle or "improve" the look.
+## Quality bar (non-negotiable)
+- Spoken Telugu that sounds like a friend talking; facts verified with sources.
+- Hook in the first 2 s; one idea per beat; visual change every 4-6 s; 45-60 s total.
+- Backgrounds relevant to the sentence being spoken; no text/watermarks inside them; presenter never hides the subject.
+- Clean cuts on word boundaries; captions from the script, timed to speech; audio -14 LUFS.
+- Every `/edit` ends with the review loop (edit -> review -> fix -> re-review) until the checklist passes.
+- Never reuse a reference's transcript or scenes 1:1 (YouTube "reused content" = not monetizable). Original scripts only.
+- Mark "altered or synthetic content" at upload when AI backgrounds are used.
 
-## Higgsfield access
-
-Two equivalent routes; prefer the CLI (`higgsfield`) because it uploads local files and downloads results:
-
-- CLI: `higgsfield account status` must show a paid plan. If it says not authenticated, stop and ask the
-  owner to run `higgsfield auth login`. Schemas are live: `higgsfield model get <model> --json` and
-  `higgsfield model list`. Always check `higgsfield generate cost ...` before the first paid job of a project
-  and tell the owner the total estimate for all scenes before continuing.
-- MCP (`.mcp.json`, server `higgsfield`): same tools, used when the CLI is missing. Authenticate with `/mcp`.
-
-Credit guide (measured with `higgsfield generate cost`, CLI 1.2.2; re-check, prices change):
-- seedance_2_5 presenter clip 5s 720p = 35 credits; 10s 1080p = 160 credits -> default to 720p and 5s scenes
-  for presenter shots; use 10s only when the brief needs an unbroken take.
-- B-roll: seedance_2_0_mini 5s = 5 credits (default), kling3_0_turbo 5s = 7.5, veo3_1_lite = 12.
-- Soul start frame (text2image_soul_v2) = 0.12 credits. Soul ID training: check cost before running.
-- A typical 45s Short (3 presenter x 5s @720p + 4-5 b-roll) is ~130-150 credits. Always print the total and
-  stop for approval before the first paid job.
-
-Model choices (verify with `higgsfield model get` — names change):
-- Start frame with the owner's face: `text2image_soul_v2 --soul-id <HIGGSFIELD_SOUL_ID> --aspect_ratio 9:16`
-  (fallback `soul_cinematic`). B-roll start frames: `nano_banana_2` or `gpt_image_2_5`, 9:16.
-- Talking clip (lip-sync to our wav), verified against CLI 1.2.2: `higgsfield generate create seedance_2_5
-  --mode omni_reference --start-image <frame.png> --audio <scene.wav> --prompt "..." --aspect_ratio 9:16
-  --duration <5|10> --resolution 1080p --generate_audio false --wait`. (`start_image` is only accepted in
-  `omni_reference` mode; `--audio` is the alias of `--audio-references`.) If it rejects audio, use `seedance_2_0`
-  (same flags). B-roll clips: same model, `--mode omni_reference --start-image` without audio, or `--mode t2v`. Never let the model invent speech: the prompt must say "speaks the supplied audio, lips in sync".
-- B-roll / animation clip: `gemini_omni` or `kling3_0 --start-image <frame> --sound off`, 9:16, 5 or 10 s.
-- Soul ID training (one-time): `higgsfield soul-id create --name me --soul-2 --image <photo>...` with every
-  photo in `assets/me/photos` (5-20, varied angles), then `higgsfield soul-id wait <id>` and write the id to
-  `.env` as `HIGGSFIELD_SOUL_ID`.
-
-## Rules
-
-- Read `brief.json` fully first. `script.scenes[*]` has `narration_te`, `visual_prompt`, `image_prompt`,
-  `clip_duration_sec`, `audio_file`, `audio_duration_sec`. The audio is the source of truth for timing.
-- One scene at a time, in order. After each generation, download the result to the paths below and record
-  the job id in `projects/<p>/jobs.json` so a re-run never pays twice (skip scenes whose files already exist).
-- Presenter scenes: the face must be the owner's (Soul ID). Vertical 9:16, phone-video realism, locked-off
-  or slow push-in, hands visible, no on-screen text in the generated video.
-- B-roll scenes: follow `visual_prompt`; match the reference's animation style from `analysis.animation_style`
-  (e.g. clean motion graphics, 3D, whiteboard). No text, no logos, no faces of real people.
-- Use the owner's language: reply in English, keep Telugu strings exactly as written in `brief.json`.
-- Do not change the Telugu narration. If a clip is a bad take, regenerate at most once, then move on and
-  note it in the final summary.
-- Files: `projects/<p>/frames/scene_<id>.png`, `projects/<p>/clips/scene_<id>.mp4`, `projects/<p>/clips/cta.mp4`.
-- Finish with `projects/<p>/timeline.json` (see `pipeline/assemble.py` docstring) and run
-  `python -m pipeline assemble projects/<p>`; report the path of `final.mp4`, the credits spent, and any
-  scene that needs a retake.
+## Costs
+- Claude: the owner's Claude Code subscription. Whisper/ffmpeg: free, local.
+- Backgrounds: ElevenLabs credits per Veo clip (one per explain beat, cached). Say how many clips before composing
+  a video with more than 8 beats. `BROLL_PROVIDER=pollinations` = free stills, lower quality.
+- Gemini (`/ref` only): free tier key; if it refuses, use `inspect`.

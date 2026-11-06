@@ -9,7 +9,7 @@ def main(argv=None):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(prog="python -m pipeline",
-                                description="YouTube Short -> Telugu AI-presenter Short (Gemini + ElevenLabs + Higgsfield)")
+                                description="Telugu Shorts studio tools (Claude Code does the thinking; these are its hands)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     a = sub.add_parser("analyze", help="Gemini: watch a Short, write brief.json + Telugu scene script")
@@ -44,14 +44,20 @@ def main(argv=None):
     e.add_argument("dst")
     e.add_argument("--preset", default="deep", choices=["deep", "clean", "none"])
 
-    r = sub.add_parser("render", help="free local renderer: Wav2Lip presenter + Gemini image b-roll -> clips/")
-    r.add_argument("project")
-    r.add_argument("--force", action="store_true", help="re-render existing clips")
-
     s = sub.add_parser("assemble", help="ffmpeg: clips + narration + captions -> final.mp4")
     s.add_argument("project")
     s.add_argument("--music", help="background music file (mixed at low volume)")
     s.add_argument("--no-subs", action="store_true")
+
+    sub.add_parser("channels", help="recent Shorts titles/views for every channel in channels.txt -> .state/channels.json").add_argument("--limit", type=int, default=15)
+    sub.add_parser("inspect", help="download a reference Short -> meta/transcript/frames for Claude (no Gemini)").add_argument("url")
+    sub.add_parser("teleprompter", help="script.json -> teleprompter.html").add_argument("script")
+    tr = sub.add_parser("transcribe", help="recording -> words.json (faster-whisper word timings + silences)")
+    tr.add_argument("media")
+    tr.add_argument("--out")
+    tr.add_argument("--lang", default="te")
+    sub.add_parser("compose", help="plan.json -> ready/<name>.mp4 + thumbnail + metadata").add_argument("plan")
+    sub.add_parser("review", help="QA facts for a video: contact sheet, loudness, black/freeze, streams").add_argument("video")
 
     d = sub.add_parser("daily", help="brief the newest Shorts from channels.txt")
     d.add_argument("--per-channel", type=int, default=3)
@@ -80,12 +86,24 @@ def main(argv=None):
         from pathlib import Path
         from . import voice
         voice.enhance(Path(args.src), Path(args.dst), args.preset)
-    elif args.cmd == "render":
-        from . import render_local
-        render_local.render(config.project_dir(args.project), args.force)
     elif args.cmd == "assemble":
         from . import assemble
         assemble.assemble(config.project_dir(args.project), args.music, args.no_subs)
+    elif args.cmd in ("channels", "inspect", "teleprompter", "transcribe", "compose", "review"):
+        from pathlib import Path
+        from . import tools
+        if args.cmd == "channels":
+            tools.channels(args.limit)
+        elif args.cmd == "inspect":
+            tools.inspect(args.url)
+        elif args.cmd == "teleprompter":
+            tools.teleprompter(Path(args.script))
+        elif args.cmd == "transcribe":
+            tools.transcribe(Path(args.media), Path(args.out) if args.out else None, args.lang or None)
+        elif args.cmd == "compose":
+            tools.compose(Path(args.plan))
+        elif args.cmd == "review":
+            tools.review(Path(args.video))
     elif args.cmd == "daily":
         from . import daily
         daily.run(args.per_channel, args.max_total)

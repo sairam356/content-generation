@@ -1,28 +1,34 @@
 {
   "permissions": {
     "allow": [
-      "Bash(higgsfield:*)",
-      "Bash(higgs:*)",
       "Bash(python:*)",
       "Bash(python3:*)",
       "Bash(py:*)",
+      "Bash(.venv\\Scripts\\python.exe:*)",
       "Bash(ffmpeg:*)",
       "Bash(ffprobe:*)",
-      "Bash(curl:*)",
+      "Bash(yt-dlp:*)",
       "Bash(dir:*)",
       "Bash(ls:*)",
-      "Bash(cat:*)",
       "Bash(type:*)",
+      "Bash(cat:*)",
       "Read",
+      "WebSearch",
+      "WebFetch",
+      "Write(topics/**)",
+      "Write(inbox/**)",
+      "Write(ready/**)",
+      "Write(memory/**)",
       "Write(projects/**)",
-      "Edit(projects/**)",
-      "Edit(.env)",
-      "mcp__higgsfield__*"
+      "Edit(topics/**)",
+      "Edit(inbox/**)",
+      "Edit(memory/**)",
+      "Edit(projects/**)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(Remove-Item:*)"
     ]
-  },
-  "enableAllProjectMcpServers": true
+  }
 }

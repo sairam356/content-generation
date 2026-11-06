@@ -34,26 +34,22 @@ if (-not (Test-Path ".venv")) { python -m venv .venv }
 & ".\.venv\Scripts\python.exe" -m pip install --upgrade pip -q
 & ".\.venv\Scripts\python.exe" -m pip install -r requirements.txt -q
 
-Write-Host "`n[3/6] Claude Code + Higgsfield CLI (npm)" -ForegroundColor Yellow
-if (Need "claude")     { npm install -g @anthropic-ai/claude-code }
-if (Need "higgsfield") { npm install -g @higgsfield/cli }
+Write-Host "`n[3/6] Claude Code (npm)" -ForegroundColor Yellow
+if (Need "claude") { npm install -g @anthropic-ai/claude-code }
 RefreshPath
 
-Write-Host "`n[4/6] Higgsfield MCP server for Claude Code (user scope) + skills" -ForegroundColor Yellow
-try { claude mcp add --transport http --scope user higgsfield https://mcp.higgsfield.ai/mcp 2>$null | Out-Null } catch { }
+Write-Host "`n[4/6] Whisper model (first transcription downloads ~500 MB; pre-fetching now)" -ForegroundColor Yellow
+& ".\.venv\Scripts\python.exe" -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', compute_type='int8'); print('  whisper small ready')"
 
 Write-Host "`n[5/6] Config" -ForegroundColor Yellow
-if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env"; Write-Host "  created .env - fill GEMINI_API_KEY and ELEVENLABS_API_KEY" }
-New-Item -ItemType Directory -Force -Path "assets\me\photos","assets\me\voice","projects",".state" | Out-Null
+if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env"; Write-Host "  created .env - fill ELEVENLABS_API_KEY (backgrounds) and GEMINI_API_KEY (/ref)" }
+New-Item -ItemType Directory -Force -Path "inbox","ready","topics","memory","projects",".state","assets\music" | Out-Null
 
 Write-Host "`n[6/6] Done. Next steps:" -ForegroundColor Green
 Write-Host @"
-  1. notepad .env                    -> paste GEMINI_API_KEY and ELEVENLABS_API_KEY
-  2. higgsfield auth login           -> sign in (paid Higgsfield plan required)
-  3. claude                          -> first run: log in; then type /mcp and authenticate 'higgsfield' (optional, CLI is enough)
-  4. Copy 5-20 photos of you  -> assets\me\photos\     (varied angles, good light, one full-body)
-     Copy 1-3 voice recordings -> assets\me\voice\      (1-3 min total, quiet room, speaking Telugu)
-  5. .\.venv\Scripts\python -m pipeline voice clone     -> clones your voice (ElevenLabs)
-     .\.venv\Scripts\python -m pipeline voice preview   -> listen to .state\preview.wav
-  6. .\run.ps1 -Url https://www.youtube.com/shorts/XXXXXXXXXXX
+  1. notepad .env            -> ELEVENLABS_API_KEY (AI backgrounds), GEMINI_API_KEY (optional, /ref)
+  2. notepad channels.txt    -> your 10+ inspiration channels, one URL per line
+  3. claude                  -> log in once, then try:  /ref <a short you like>   and   /topics
+  4. .\setup\register-daily-task.ps1 -At 07:30 -Watcher   -> daily topics + inbox auto-edit at logon
+  5. Record with topics\<date>\<nn>\teleprompter.html open, drop the video into inbox\ -> ready\<name>.mp4
 "@
