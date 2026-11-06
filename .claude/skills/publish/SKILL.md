@@ -1,7 +1,7 @@
 ---
 name: publish
 description: Final pre-upload pack for a ready video - compliance verdict, upload settings, title/description/hashtags variants, best posting time, thumbnail check. Does not upload.
-allowed-tools: Bash, Read, Write, Edit, Glob, Agent, WebSearch
+allowed-tools: Bash, Read, Write, Edit, Glob, Agent, WebSearch, mcp__claude-in-chrome__*
 ---
 Read `.claude/skills/_shared/preamble.md` first. Argument: `ready/<name>.mp4` (or the name).
 
@@ -14,4 +14,5 @@ Read `.claude/skills/_shared/preamble.md` first. Argument: `ready/<name>.mp4` (o
 ## Steps
 1. Read `ready/<name>.md`, the plan/script it came from, `policy/youtube.md`.
 2. Agents in parallel: `compliance` (final), `reach` (title/description/time), then `reviewer`.
-3. Write the pack. If BLOCKED, say exactly what to change and which skill fixes it.
+3. Thumbnail: review `ready/<name>.jpg` + `_wide.jpg`; if weak, rebuild in Canva via Chrome (his Pro templates) and save over them.
+4. Write the pack. If BLOCKED, say exactly what to change and which skill fixes it.

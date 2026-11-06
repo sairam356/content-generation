@@ -397,10 +397,24 @@ def compose(plan_path: Path) -> Path:
                                    "alimiter=limit=0.95,loudnorm=I=-14:TP=-1.5:LRA=11")
     music = plan.get("music")
     fc = f"[0:v]subtitles='{ass_arg}'[v];[1:a]{af}[voice]"
+    mix, idx = ["[voice]"], 2
     if music:
         mpath = Path(music) if Path(music).is_absolute() else config.ROOT / music
         cmd += ["-stream_loop", "-1", "-i", str(mpath)]
-        fc += f";[2:a]volume={float(plan.get('music_volume', 0.08))}[m];[voice][m]amix=inputs=2:duration=first:dropout_transition=2[a]"
+        fc += f";[{idx}:a]volume={float(plan.get('music_volume', 0.08))},afade=t=out:st={max(0.0, remap.total - 1.5):.2f}:d=1.5[m]"
+        mix.append("[m]"); idx += 1
+    # sound effects: [{"at": recording_sec | "out": output_sec, "file": "assets/sfx/whoosh.mp3", "gain": 0.5}]
+    for n, fx in enumerate(plan.get("sfx", [])):
+        fpath = Path(fx["file"]) if Path(fx["file"]).is_absolute() else config.ROOT / fx["file"]
+        if not fpath.exists():
+            print(f"[compose]   sfx missing, skipped: {fpath}", file=sys.stderr)
+            continue
+        at = float(fx["out"]) if "out" in fx else remap(float(fx["at"]))
+        cmd += ["-i", str(fpath)]
+        fc += f";[{idx}:a]volume={float(fx.get('gain', 0.5))},adelay={int(at * 1000)}|{int(at * 1000)}[fx{n}]"
+        mix.append(f"[fx{n}]"); idx += 1
+    if len(mix) > 1:
+        fc += f";{''.join(mix)}amix=inputs={len(mix)}:duration=first:dropout_transition=0:normalize=0[a]"
     else:
         fc += ";[voice]anull[a]"
     cmd += ["-filter_complex", fc, "-map", "[v]", "-map", "[a]", "-t", f"{remap.total:.3f}", "-c:v", "libx264",
@@ -409,7 +423,7 @@ def compose(plan_path: Path) -> Path:
     _run(cmd)
 
     thumb_at = float(plan.get("thumbnail_sec", remap(float(beats[0]["start"])) + 0.8 if beats else 1.0))
-    _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{thumb_at:.2f}", "-i", str(final), "-frames:v", "1", str(ready / f"{name}.jpg")])
+    thumbnail(final, thumb_at, plan.get("thumbnail_text_te") or plan.get("title_te") or "", accent, ready / f"{name}.jpg", font)
     meta = [f"# {plan.get('title_te', name)}", "", plan.get("description_te", ""), "",
             " ".join(plan.get("hashtags", [])), "", f"Duration: {duration(final):.1f}s  Layout: {layout}",
             "Label at upload: 'Altered or synthetic content' = YES only if AI b-roll is used (it is, when backgrounds are generated)."]
@@ -417,6 +431,31 @@ def compose(plan_path: Path) -> Path:
     print(f"[compose] ready: {final}  ({duration(final):.1f}s)")
     print(final)
     return final
+
+
+def thumbnail(video: Path, at: float, text: str, accent: str, out: Path, font: str = "Nirmala UI") -> Path:
+    """Frame + big Telugu title (2 lines max, accent underline) -> out (1080x1920) and out_wide (1280x720)."""
+    frame = out.with_suffix(".frame.png")
+    _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{at:.2f}", "-i", str(video), "-frames:v", "1", str(frame)])
+    words = text.split()
+    lines = [" ".join(words[:len(words) // 2 or 1]), " ".join(words[len(words) // 2 or 1:])] if len(words) > 3 else [text]
+    txt = "\\N".join(_esc(l) for l in lines if l)
+    acc = accent.lstrip("#")
+    ass = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {W}", f"PlayResY: {H}", "", "[V4+ Styles]",
+           "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+           f"Style: T,{font},118,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,9,4,8,50,50,260,1",
+           f"Style: U,{font},118,&H00{acc[4:6]}{acc[2:4]}{acc[0:2]},&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,8,50,50,260,1",
+           "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+           f"Dialogue: 0,0:00:00.00,0:00:01.00,T,,0,0,0,,{txt}"]
+    ass_p = out.with_suffix(".thumb.ass"); ass_p.write_text("\n".join(ass), encoding="utf-8")
+    ass_arg = ass_p.resolve().as_posix().replace(":", "\\:")
+    vf = (f"eq=contrast=1.08:saturation=1.15,drawbox=x=0:y=0:w={W}:h=520:color=black@0.45:t=fill,"
+          f"drawbox=x=60:y=560:w=360:h=14:color=0x{acc}:t=fill,subtitles='{ass_arg}'")
+    _run(["ffmpeg", "-y", "-v", "error", "-i", str(frame), "-vf", vf, "-frames:v", "1", "-q:v", "2", str(out)])
+    wide = out.with_name(out.stem + "_wide.jpg")
+    _run(["ffmpeg", "-y", "-v", "error", "-i", str(out), "-vf", "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720", "-q:v", "2", str(wide)])
+    frame.unlink(missing_ok=True); ass_p.unlink(missing_ok=True)
+    return out
 
 
 # ----------------------------------------------------------------------------- review

@@ -20,7 +20,7 @@ Goal: the channel stays eligible for the YouTube Partner Program and never gets 
   nothing that targets children, no graphic violence, no misinformation on elections/health.
 - "Funny / annoying / silly India moments" are about situations and habits, never about a named person, caste,
   religion, region or gender as a group.
-- Copyright: no third-party clips, no copyrighted music. Music only from `assets/music/` (owner-licensed) or none.
+- Copyright: no third-party clips, no copyrighted music. Music and sound effects only from the YouTube Audio Library catalog in `assets/music/music.json` / `assets/sfx/sfx.json`, or none.
 - Thumbnails/titles must match the content (no clickbait that the video does not deliver).
 
 ## Metadata hygiene

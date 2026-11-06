@@ -1,7 +1,7 @@
 ---
 name: edit
 description: Pro edit of the owner's recording into ready/<name>.mp4 - cut like a human editor, relevant animated backgrounds, chosen layout, Telugu captions, music, then a strict review loop with the specialist panel. Refuses scripts that are not approved.
-allowed-tools: Bash, Read, Write, Edit, Glob, Agent
+allowed-tools: Bash, Read, Write, Edit, Glob, Agent, mcp__claude-in-chrome__*
 ---
 Read `.claude/skills/_shared/preamble.md` first. Arguments: `<recording> [script.json] [--layout corner|circle-top|split|full] [--no-script]`.
 
@@ -29,9 +29,17 @@ Find the script: given, else newest `topics/*/*/script.json` whose hook matches 
 5. Music: if the script's `music_mood` is not `none` and `assets/music/music.json` exists, pick the track a human
    would (mood match, no vocals, not used in the last 3 videos per `memory/done.md`); set `music` + `music_volume`
    (0.06-0.10). No catalog → no music (never download random music).
-6. Write `<folder>/plan.json` (schema in CLAUDE.md) and run `python -m pipeline compose <folder>/plan.json`.
+6. Sound design like a pro editor (only from `assets/sfx/sfx.json`; none → skip): a soft whoosh on the hook→beat-1
+   transition and on layout changes, a pop when a label appears (first explain beat and the twist beat), a riser
+   into the twist beat, never more than one SFX per 3 s, gains 0.3-0.5. Put them in `plan.sfx`
+   ([{at: recording_sec, file, gain}]). Thumbnail: `thumbnail_text_te` = the hook in ≤ 6 words, `thumbnail_sec` =
+   the frame where his face is most expressive (pick from the contact sheet after the first compose).
+   Canva (optional, via Chrome tools `mcp__claude-in-chrome__*`, his Pro account at canva.com): when a title card,
+   end card or thumbnail would look better from a template, build it there (9:16, export PNG) into
+   `<folder>/canva/` and reference it from the plan as `title_card` / `end_card` / use it as the thumbnail.
+7. Write `<folder>/plan.json` (schema in CLAUDE.md) and run `python -m pipeline compose <folder>/plan.json`.
    Backgrounds: Veo via ElevenLabs credits per explain beat (cached per beat id). > 8 beats: say the count first.
-7. Review loop (mandatory, max 3 rounds):
+8. Review loop (mandatory, max 3 rounds):
    a. `python -m pipeline review ready/<name>.mp4`; view `review/contact.jpg`.
    b. Panel (Agent, parallel): `designer`, `taste`, `end-viewer`, `compliance`, `reach`, `comparison`; then `reviewer`.
    c. Checklist: hook < 0.3 s & full-frame & title readable · every cut clean (no clipped words, no mid-sentence
@@ -40,4 +48,4 @@ Find the script: given, else newest `topics/*/*/script.json` whose hook matches 
       every 4-6 s · length within target · audio -14 ± 2 LUFS, no clipping, no silence > 0.8 s · music under the
       voice, licensed · looks like the references.
    d. Anything failing → fix plan.json (or delete `build/bg_<id>*` to regenerate a background) → compose → review.
-8. Append to `memory/done.md`: date | name | topic | layout | duration | music | panel verdict. Reply.
+9. Append to `memory/done.md`: date | name | topic | layout | duration | music | panel verdict. Reply.

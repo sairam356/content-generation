@@ -49,7 +49,7 @@ Write-Host "`n[6/6] Done. Next steps:" -ForegroundColor Green
 Write-Host @"
   1. notepad .env            -> ELEVENLABS_API_KEY (AI backgrounds), GEMINI_API_KEY (optional, /ref)
   2. notepad channels.txt    -> your 10+ inspiration channels, one URL per line
-  3. claude                  -> log in once, then try:  /ref <a short you like>   and   /topics
+  3. claude                  -> log in once; install the 'Claude in Chrome' extension (used for /music and Canva); try /ref <url>, /topics
   4. .\setup\register-daily-task.ps1 -At 07:30 -Watcher   -> daily topics + inbox auto-edit at logon
   5. Record with topics\<date>\<nn>\teleprompter.html open, drop the video into inbox\ -> ready\<name>.mp4
 "@

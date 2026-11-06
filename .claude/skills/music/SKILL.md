@@ -10,7 +10,7 @@ Only YouTube Audio Library tracks (free, cleared for monetized videos) are allow
 library has ~10,000 tracks and sits behind the owner's Google login, so you browse it in HIS Chrome.
 
 ## Done means
-- `assets/music/<slug>.mp3` files downloaded (moved from the Downloads folder) and
+- `assets/music/<slug>.mp3` + `assets/sfx/*` downloaded (moved from the Downloads folder) and
   `assets/music/music.json` = [{file, title, artist, mood, genre, bpm, duration_sec, attribution_required:false,
   source:"YouTube Audio Library", picked_for:"..."}].
 - Reply: the table of picks.
@@ -25,4 +25,7 @@ library has ~10,000 tracks and sits behind the owner's Google login, so you brow
    with steady rhythm, low-mid energy, no sudden hits; prefer 90-120 BPM for upbeat, < 90 for calm. Preview 3-5,
    choose `count` per mood. Note title, artist, genre, mood, duration.
 4. Click Download for each; move the files from the Downloads folder into `assets/music/` with a clean slug name.
-5. Write `music.json`; add one line to `memory/style.md` → Owner notes if he expressed a taste.
+5. Sound effects: Audio Library → "Sound effects" tab. Pick like an editor building a kit: 3 whooshes (short, soft),
+   3 pops/clicks (for labels), 2 risers (for the twist beat), 2 subtle impacts, 1 "ding". Download into
+   `assets/sfx/` and write `assets/sfx/sfx.json` = [{file, title, kind: whoosh|pop|riser|impact|ding, duration_sec}].
+6. Write `music.json`; add one line to `memory/style.md` → Owner notes if he expressed a taste.

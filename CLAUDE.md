@@ -50,10 +50,17 @@ All exit non-zero with a reason on failure and print the output path on success.
  "beats":[{"id":1,"kind":"hook","start":0.8,"end":4.0,"captions":[{"start":0.8,"end":1.9,"text":"ఇడ్లీ ఎందుకు"}]},
           {"id":2,"kind":"explain","start":4.0,"end":15.0,"label_te":"ఫర్మెంటేషన్",
            "broll_prompt":"idli batter bubbling in a steel vessel, warm kitchen light, slow push-in","captions":[]}],
- "thumbnail_sec":1.2}
+ "sfx":[{"at":4.0,"file":"assets/sfx/whoosh-soft.mp3","gain":0.4}],
+ "thumbnail_sec":1.2,"thumbnail_text_te":"ఇడ్లీ ఎందుకు మెత్తగా?"}
 ```
 Times are recording seconds (compose remaps after cutting). Hook/CTA = presenter full-frame. Explain beats get a
 generated background (Veo via ElevenLabs when `ELEVENLABS_API_KEY` is set; `BROLL_PROVIDER=none` → presenter only).
+
+## Canva (his Pro account) and the Audio Library
+Both are used through his logged-in Chrome with the "Claude in Chrome" extension (`mcp__claude-in-chrome__*` tools):
+`/music` builds `assets/music/music.json` + `assets/sfx/sfx.json` from the YouTube Audio Library; `/edit` and
+`/publish` may build title/end cards and thumbnails from Canva templates at canva.com (export PNG 9:16).
+compose output: `ready/<name>.mp4`, `.jpg` (1080x1920 thumbnail with title text), `_wide.jpg` (1280x720), `.md`.
 
 ## Rules that never bend
 Original scripts, verified facts with sources, policy/youtube.md on every video, AI backgrounds declared,

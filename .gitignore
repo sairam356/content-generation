@@ -17,3 +17,6 @@ topics/
 assets/music/*
 !assets/music/.gitkeep
 !assets/music/music.example.json
+tools/
+assets/sfx/*
+!assets/sfx/.gitkeep
