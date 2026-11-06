@@ -9,7 +9,7 @@ __pycache__/
 *.log
 inbox/
 ready/
-topics/
+/topics/
 *.ass
 *.jpg
 *.png
@@ -20,5 +20,5 @@ assets/music/*
 tools/
 assets/sfx/*
 !assets/sfx/.gitkeep
-community/
-analytics/
+/community/
+/analytics/
