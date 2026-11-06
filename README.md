@@ -41,6 +41,15 @@ claude                            # log in; install the "Claude in Chrome" exten
 4. `claude` → `/publish ready\<name>.mp4` → upload with the settings it gives.
 5. Weekly (Sunday, scheduled): `/analytics` reads your Studio numbers → rules into memory; `/community` drafts the week's post.
 
+Workflow smoke test (no paid b-roll, no production-script approval):
+
+```powershell
+.\test-studio.ps1
+```
+
+It uses the first recording in `inbox\samples` and must finish with a reviewed MP4 in `ready\`. The result tests
+the machinery; it is not meant for publishing.
+
 Layouts: `corner` (you lower-left over the background — Osm Dhruva look) · `circle-top` (you in a round frame at the
 top) · `split` · `full`. Default lives in `memory\style.md`; per video: `/edit <file> --layout circle-top`.
 
