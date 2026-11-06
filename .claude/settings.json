@@ -5,7 +5,7 @@
       "Bash(ffmpeg:*)", "Bash(ffprobe:*)", "Bash(yt-dlp:*)",
       "Bash(dir:*)", "Bash(ls:*)", "Bash(type:*)", "Bash(cat:*)", "Bash(move:*)", "Bash(copy:*)",
       "Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent",
-      "Write(topics/**)", "Write(inbox/**)", "Write(ready/**)", "Write(memory/**)", "Write(assets/music/**)", "Write(community/**)", "Edit(community/**)",
+      "Write(topics/**)", "Write(inbox/**)", "Write(ready/**)", "Write(memory/**)", "Write(assets/music/**)", "Write(community/**)", "Write(analytics/**)", "Edit(analytics/**)", "Edit(community/**)",
       "Edit(topics/**)", "Edit(inbox/**)", "Edit(ready/**)", "Edit(memory/**)", "Edit(assets/music/**)",
       "mcp__claude-in-chrome__*"
     ],

@@ -39,6 +39,7 @@ claude                            # log in; install the "Claude in Chrome" exten
 2. Open that folder's `teleprompter.html` (SPACE scrolls), record 9:16, good light, look at the lens.
 3. Copy the video into `inbox\` → a few minutes later `ready\<name>.mp4` + thumbnail + metadata.
 4. `claude` → `/publish ready\<name>.mp4` → upload with the settings it gives.
+5. Weekly (Sunday, scheduled): `/analytics` reads your Studio numbers → rules into memory; `/community` drafts the week's post.
 
 Layouts: `corner` (you lower-left over the background — Osm Dhruva look) · `circle-top` (you in a round frame at the
 top) · `split` · `full`. Default lives in `memory\style.md`; per video: `/edit <file> --layout circle-top`.

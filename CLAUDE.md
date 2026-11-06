@@ -17,6 +17,7 @@ Read `.claude/skills/_shared/preamble.md` at the start of every skill. Read `ETH
 | `/publish ready/<name>.mp4` | upload pack: compliance verdict, settings, titles, posting time |
 | `/music` | licensed music catalog from the YouTube Audio Library via his Chrome |
 | `/community` | weekly Community post draft → `community/<date>.md` (he pastes it) |
+| `/analytics [csv]` | Studio analytics → diagnosis per video → rules in memory (weekly) |
 | `/retro` | learnings → `memory/learnings.md` |
 
 ## Specialist panel (`.claude/agents/`, dispatched with the Agent tool, in parallel)

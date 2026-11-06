@@ -21,3 +21,4 @@ tools/
 assets/sfx/*
 !assets/sfx/.gitkeep
 community/
+analytics/
