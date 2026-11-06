@@ -43,6 +43,7 @@ This is the owner's explicitly approved end-to-end workflow TEST.
 - Do not use paid APIs. BROLL_PROVIDER=none is intentional; use presenter-only fallback.
 - Complete transcription, human edit decisions, compose, thumbnail, review, fix loop, and ready metadata.
 - Record each blocker and its resolution in the final report.
+- The video counts as done only when `python -m pipeline verify <ready mp4>` reports ok.
 "@
 
 $prompt | claude --model opus -p --permission-mode acceptEdits `
@@ -56,6 +57,11 @@ $output = Get-ChildItem "ready" -Filter "*.mp4" |
 
 if (-not $output) {
   throw "End-to-end test produced no ready MP4. See $log"
+}
+
+python -m pipeline verify $output.FullName | Out-File -Append -FilePath $log -Encoding utf8
+if ($LASTEXITCODE -ne 0) {
+  throw "Output failed verification (incomplete or unplayable MP4): $($output.FullName). See $log"
 }
 
 Write-Host "READY: $($output.FullName)" -ForegroundColor Green

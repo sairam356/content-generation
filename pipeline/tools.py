@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import os
+import struct
 import subprocess
 import sys
 import time
@@ -399,6 +401,7 @@ def compose(plan_path: Path) -> Path:
     ass_path.write_text("\n".join(ass), encoding="utf-8")
 
     final = ready / f"{name}.mp4"
+    tmp_final = work / f"{name}.final.tmp.mp4"
     ass_arg = ass_path.resolve().as_posix().replace(":", "\\:")
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", str(joined), "-i", str(cut)]
     af = config.env("VOICE_CHAIN", "highpass=f=70,acompressor=threshold=-18dB:ratio=3:attack=8:release=120:makeup=4,"
@@ -427,8 +430,9 @@ def compose(plan_path: Path) -> Path:
         fc += ";[voice]anull[a]"
     cmd += ["-filter_complex", fc, "-map", "[v]", "-map", "[a]", "-t", f"{remap.total:.3f}", "-c:v", "libx264",
             "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-            "-movflags", "+faststart", str(final)]
+            "-movflags", "+faststart", str(tmp_final)]
     _run(cmd)
+    publish(tmp_final, final)
 
     thumb_at = float(plan.get("thumbnail_sec", remap(float(beats[0]["start"])) + 0.8 if beats else 1.0))
     thumbnail(joined, thumb_at, plan.get("thumbnail_text_te") or plan.get("title_te") or "", accent, ready / f"{name}.jpg", font)
@@ -438,6 +442,85 @@ def compose(plan_path: Path) -> Path:
     (ready / f"{name}.md").write_text("\n".join(meta), encoding="utf-8")
     print(f"[compose] ready: {final}  ({duration(final):.1f}s)")
     print(final)
+    return final
+
+
+# ----------------------------------------------------------------------------- verify / publish
+def _atoms(path: Path) -> list[tuple[str, int, int]]:
+    out, pos, end = [], 0, path.stat().st_size
+    with open(path, "rb") as f:
+        while pos + 8 <= end:
+            f.seek(pos)
+            sz, typ = struct.unpack(">I4s", f.read(8))
+            if sz == 1:
+                sz = struct.unpack(">Q", f.read(8))[0]
+            if sz == 0:
+                sz = end - pos
+            out.append((typ.decode("latin1"), pos, sz))
+            pos += sz
+    return out
+
+
+def verify(video: Path) -> dict:
+    """Prove a delivered MP4 is complete and plays everywhere (Windows Media Player, YouTube, phones):
+    every atom accounted for, moov before mdat (faststart), H.264 yuv420p <= level 4.2 + AAC 48k stereo,
+    9:16 1080x1920, duration > 0, and a FULL decode of every video frame and audio packet with zero errors.
+    Returns the report; report["ok"] is the single gate."""
+    video = Path(video)
+    rep: dict = {"video": str(video), "ok": False, "errors": []}
+    err = rep["errors"]
+    if not video.exists() or video.stat().st_size == 0:
+        err.append("file missing or empty"); return rep
+    try:
+        atoms = _atoms(video)
+    except Exception as e:  # noqa: BLE001
+        atoms = []; err.append(f"atom parse failed: {e}")
+    names = [a[0] for a in atoms]
+    rep["atoms"] = names
+    if atoms and atoms[-1][1] + atoms[-1][2] != video.stat().st_size:
+        err.append("atom sizes do not add up to file size (truncated / still being written)")
+    if "moov" not in names or "mdat" not in names:
+        err.append("missing moov or mdat (unfinished mp4)")
+    elif names.index("moov") > names.index("mdat"):
+        err.append("moov after mdat (no faststart)")
+    pr = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
+                         "stream=codec_type,codec_name,profile,level,pix_fmt,width,height,sample_rate,channels,r_frame_rate"
+                         ":format=duration,nb_streams", "-of", "json", str(video)], capture_output=True, text=True)
+    info = json.loads(pr.stdout or "{}")
+    st = {x.get("codec_type"): x for x in info.get("streams", [])}
+    rep["streams"] = info.get("streams"); rep["duration_sec"] = float(info.get("format", {}).get("duration", 0) or 0)
+    v, a = st.get("video"), st.get("audio")
+    if not v: err.append("no video stream")
+    else:
+        if v.get("codec_name") != "h264": err.append(f"video codec {v.get('codec_name')} != h264")
+        if v.get("pix_fmt") != "yuv420p": err.append(f"pix_fmt {v.get('pix_fmt')} != yuv420p")
+        if int(v.get("level") or 0) > 42: err.append(f"h264 level {v.get('level')} > 4.2")
+        if (v.get("width"), v.get("height")) != (W, H): err.append(f"size {v.get('width')}x{v.get('height')} != {W}x{H}")
+    if not a: err.append("no audio stream")
+    else:
+        if a.get("codec_name") != "aac": err.append(f"audio codec {a.get('codec_name')} != aac")
+        if str(a.get("sample_rate")) != "48000": err.append(f"sample_rate {a.get('sample_rate')} != 48000")
+    if rep["duration_sec"] <= 0: err.append("duration is zero / unknown")
+    if rep["duration_sec"] > 180: err.append("longer than 180s (not a Short)")
+    dec = subprocess.run(["ffmpeg", "-v", "error", "-xerror", "-i", str(video), "-f", "null", "-"],
+                         capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if dec.returncode != 0 or dec.stderr.strip():
+        err.append("full decode failed: " + (dec.stderr.strip().splitlines() or ["non-zero exit"])[-1])
+    rep["full_decode"] = dec.returncode == 0 and not dec.stderr.strip()
+    rep["ok"] = not err
+    return rep
+
+
+def publish(tmp: Path, final: Path) -> Path:
+    """Gate + atomic move: the file appears in ready/ only after verify() passes, so nobody (owner, watcher,
+    uploader) can ever open a half-written or broken MP4. On failure the tmp file is kept for diagnosis."""
+    rep = verify(tmp)
+    (final.parent / f"{final.stem}.verify.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
+    if not rep["ok"]:
+        raise RuntimeError(f"[publish] output failed verification, NOT published: {rep['errors']} (kept {tmp})")
+    final.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(tmp, final)
+    print(f"[publish] verified ({rep['duration_sec']:.1f}s, full decode ok) -> {final}")
     return final
 
 
@@ -486,9 +569,10 @@ def review(video: Path) -> Path:
     issues = [l.strip() for l in bd.splitlines() if "black_start" in l or "freeze_start" in l]
     streams = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height,r_frame_rate,sample_rate",
                               "-of", "json", str(video)], capture_output=True, text=True).stdout
-    rep = {"video": str(video), "duration_sec": round(dur, 2), "loudness": {k: loud.get(k) for k in ("input_i", "input_tp", "input_lra")},
+    ver = verify(video)
+    rep = {"video": str(video), "duration_sec": round(dur, 2), "verify": ver, "loudness": {k: loud.get(k) for k in ("input_i", "input_tp", "input_lra")},
            "black_or_freeze": issues, "streams": json.loads(streams or "{}").get("streams"), "contact_sheet": str(out / "contact.jpg"),
-           "checks": {"duration_ok_for_shorts": dur <= 180, "loudness_near_-14": bool(loud) and abs(float(loud.get("input_i", -99)) + 14) <= 2.5}}
+           "checks": {"playable_everywhere": ver["ok"], "duration_ok_for_shorts": dur <= 180, "loudness_near_-14": bool(loud) and abs(float(loud.get("input_i", -99)) + 14) <= 2.5}}
     (out / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(rep, ensure_ascii=False, indent=1))
     return out
