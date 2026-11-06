@@ -121,7 +121,11 @@ def transcribe(media: Path, out: Path | None = None, language: str | None = "te"
     print(f"[transcribe] whisper {model_name} on {media.name} ...")
     t0 = time.time()
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
-    segs, info = model.transcribe(str(wav), language=language, word_timestamps=True, vad_filter=True,
+    import wave
+    import numpy as np
+    with wave.open(str(wav), "rb") as wf:  # decode ourselves: avoids PyAV version mismatches on Windows
+        pcm = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    segs, info = model.transcribe(pcm, language=language, word_timestamps=True, vad_filter=True,
                                   vad_parameters={"min_silence_duration_ms": 400})
     words, segments = [], []
     for s in segs:
