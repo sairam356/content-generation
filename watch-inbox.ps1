@@ -4,7 +4,7 @@
 .EXAMPLE   .\watch-inbox.ps1                 # default layout from memory\style.md
            .\watch-inbox.ps1 -Layout circle-top
 #>
-param([string]$Layout = "", [int]$PollSec = 15)
+param([string]$Layout = "", [string]$Script = "", [int]$PollSec = 15)
 $ErrorActionPreference = "Continue"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
@@ -25,7 +25,8 @@ while ($true) {
     Move-Item $f.FullName "$job\$($f.Name)"
     $log = "$job\claude.log"
     Write-Host "`n== $(Get-Date -Format HH:mm) editing $($f.Name) -> $job" -ForegroundColor Yellow
-    $args = "/edit $job\$($f.Name)"
+    $args = "/edit `"$job\$($f.Name)`""
+    if ($Script) { $args += " `"$Script`"" }
     if ($Layout) { $args += " --layout $Layout" }
     claude --model opus -p $args --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" 2>&1 | Tee-Object -FilePath $log
     $out = Get-ChildItem ready -Filter "*.mp4" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
