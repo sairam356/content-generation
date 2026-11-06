@@ -423,7 +423,7 @@ def compose(plan_path: Path) -> Path:
     _run(cmd)
 
     thumb_at = float(plan.get("thumbnail_sec", remap(float(beats[0]["start"])) + 0.8 if beats else 1.0))
-    thumbnail(final, thumb_at, plan.get("thumbnail_text_te") or plan.get("title_te") or "", accent, ready / f"{name}.jpg", font)
+    thumbnail(joined, thumb_at, plan.get("thumbnail_text_te") or plan.get("title_te") or "", accent, ready / f"{name}.jpg", font)
     meta = [f"# {plan.get('title_te', name)}", "", plan.get("description_te", ""), "",
             " ".join(plan.get("hashtags", [])), "", f"Duration: {duration(final):.1f}s  Layout: {layout}",
             "Label at upload: 'Altered or synthetic content' = YES only if AI b-roll is used (it is, when backgrounds are generated)."]
@@ -437,6 +437,7 @@ def thumbnail(video: Path, at: float, text: str, accent: str, out: Path, font: s
     """Frame + big Telugu title (2 lines max, accent underline) -> out (1080x1920) and out_wide (1280x720)."""
     frame = out.with_suffix(".frame.png")
     _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{at:.2f}", "-i", str(video), "-frames:v", "1", str(frame)])
+    text = re.sub(r"[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F]", "", text).strip()  # fonts lack emoji
     words = text.split()
     lines = [" ".join(words[:len(words) // 2 or 1]), " ".join(words[len(words) // 2 or 1:])] if len(words) > 3 else [text]
     txt = "\\N".join(_esc(l) for l in lines if l)
