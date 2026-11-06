@@ -1,6 +1,6 @@
 ---
 name: edit
-description: Pro edit of the owner's recording into ready/<name>.mp4 - cut like a human editor, relevant animated backgrounds, chosen layout, Telugu captions, music, then a strict review loop with the specialist panel. Refuses scripts that are not approved.
+description: Pro edit of the owner's recording into ready/<name>.mp4 - cut like a human editor, relevant animated backgrounds, chosen layout, Telugu captions, music, then a strict review loop with the specialist panel.
 allowed-tools: Bash, Read, Write, Edit, Glob, Agent, mcp__claude-in-chrome__*
 ---
 Read `.claude/skills/_shared/preamble.md` first. Arguments: `<recording> [script.json] [--layout corner|circle-top|split|full] [--no-script]`.
@@ -13,10 +13,10 @@ Read `.claude/skills/_shared/preamble.md` first. Arguments: `<recording> [script
   reach, comparison → reviewer) and the checklist below all PASS, or the remaining issue is stated.
 - `memory/done.md` has a new line. Reply: what you cut, layout, backgrounds used, music, anything to re-record.
 
-## Gate
+## Script matching
 Find the script: given, else newest `topics/*/*/script.json` whose hook matches the first sentence spoken
-(compare after transcription). If `approved` is not true and `--no-script` was not passed: STOP and say
-"script <path> is not approved - say 'approved' or run with --no-script". Headless: report and exit.
+(compare after transcription). Recording a panel-reviewed script is acceptance; never stop for a separate approval.
+Use `--no-script` only for explicit smoke tests or a genuinely unscripted recording.
 
 ## Steps (work like a senior Shorts editor would today)
 1. Claim a workflow keyed by the recording's resolved path using the shared one-owner rule. If another live edit

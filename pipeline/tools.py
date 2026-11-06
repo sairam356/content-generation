@@ -156,30 +156,51 @@ def transcribe(media: Path, out: Path | None = None, language: str | None = "te"
 
 
 # ----------------------------------------------------------------------------- teleprompter
-TELEPROMPTER_HTML = """<!doctype html><html lang="te"><head><meta charset="utf-8"><title>{title}</title>
+TELEPROMPTER_HTML = """<!doctype html><html lang="te"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title>
 <style>
- body{{margin:0;background:#000;color:#fff;font-family:"Nirmala UI","Noto Sans Telugu",sans-serif;overflow:hidden}}
- #bar{{position:fixed;top:0;left:0;right:0;padding:8px 14px;background:#111;font:14px system-ui;color:#aaa;z-index:9}}
- #bar b{{color:#fff}} #line{{position:fixed;top:40%;left:0;right:0;border-top:2px solid #e33;opacity:.5}}
- #txt{{padding:45vh 8vw 60vh;font-size:{size}px;line-height:1.55;font-weight:600}}
- .beat{{margin:0 0 1.2em}} .hook{{color:#ffd54a}} .cta{{color:#7fd3ff}} .cue{{font-size:.45em;color:#777;font-weight:400;display:block}}
- .mirror{{transform:scaleX(-1)}}
+ :root{{--accent:#ffd54a;--panel:rgba(18,18,18,.92)}}
+ *{{box-sizing:border-box}}
+ html{{background:#000}}
+ body{{margin:0;background:radial-gradient(circle at 50% 35%,#151515 0,#050505 48%,#000 100%);color:#fff;font-family:"Nirmala UI","Noto Sans Telugu",sans-serif;overflow:hidden}}
+ #bar{{position:fixed;top:0;left:0;right:0;min-height:54px;padding:10px 18px;background:linear-gradient(#111 60%,rgba(17,17,17,.72));font:14px system-ui;color:#aaa;z-index:9;display:flex;align-items:center;gap:12px}}
+ #bar b{{color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}} #st{{white-space:nowrap;color:#ddd}}
+ #line{{position:fixed;top:43%;left:3vw;right:3vw;border-top:2px solid rgba(255,80,80,.7);z-index:3;pointer-events:none}}
+ #line:before,#line:after{{content:"";position:absolute;top:-7px;width:12px;height:12px;border-radius:50%;background:#ff5050}}
+ #line:before{{left:-2px}} #line:after{{right:-2px}}
+ #txt{{width:min(92vw,1000px);margin:0 auto;padding:43vh 2vw 70vh;font-size:clamp(34px,5.2vw,{size}px);line-height:1.48;font-weight:650;text-align:center;letter-spacing:.01em;text-wrap:balance}}
+ .beat{{margin:0 0 1.35em;text-shadow:0 2px 12px #000}} .hook{{color:var(--accent)}} .cta{{color:#78d7ff}} .cue{{font:600 .32em/1.4 system-ui;color:#888;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:.65em}}
+ #controls{{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:8px;border:1px solid #333;border-radius:14px;background:var(--panel);z-index:10;box-shadow:0 8px 30px #000}}
+ button{{border:1px solid #444;border-radius:9px;background:#242424;color:#eee;padding:9px 13px;font:600 14px system-ui;cursor:pointer}}
+ button:hover{{background:#333}} #play{{background:#f2c94c;color:#111;border-color:#f2c94c;min-width:92px}}
+ .mirror #txt{{transform:scaleX(-1)}} .mirror #line{{transform:scaleX(-1)}}
+ @media(max-width:650px){{#bar{{padding:9px 12px}}#bar b{{display:none}}#controls{{bottom:8px;width:calc(100% - 16px);justify-content:center}}button{{padding:9px 10px}}#txt{{width:96vw;padding-left:3vw;padding-right:3vw}}}}
 </style></head><body>
-<div id="bar"><b>{title}</b> &nbsp; SPACE start/pause &nbsp; UP/DOWN speed &nbsp; R restart &nbsp; M mirror &nbsp; +/- font &nbsp; <span id="st">paused, speed <span id="sp">{speed}</span> px/s</span></div>
+<div id="bar"><b>{title}</b><span>Space play · ↑/↓ speed · R restart · M mirror · +/- size</span><span id="st">Paused · <span id="sp">{speed}</span> px/s</span></div>
 <div id="line"></div>
-<div id="txt">{body}</div>
+<main id="txt" dir="auto">{body}</main>
+<nav id="controls"><button id="restart">Restart</button><button id="slower">Slower</button><button id="play">Start</button><button id="faster">Faster</button><button id="mirror">Mirror</button><button id="full">Full screen</button></nav>
 <script>
  let speed={speed},run=false,y=0,last=null,txt=document.getElementById('txt'),fs={size};
+ const play=document.getElementById('play'),sp=document.getElementById('sp'),st=document.getElementById('st');
+ function status(){{play.textContent=run?'Pause':'Start';sp.textContent=speed;st.firstChild.textContent=(run?'Running':'Paused')+' · ';}}
+ function toggle(){{run=!run;status()}}
+ function restart(){{y=0;window.scrollTo(0,0);run=false;status()}}
  function step(t){{ if(run){{ if(last!==null){{ y+= speed*(t-last)/1000; window.scrollTo(0,y);}} last=t; }} else last=null; requestAnimationFrame(step);}}
  requestAnimationFrame(step);
  document.addEventListener('keydown',e=>{{
-  if(e.code==='Space'){{run=!run;e.preventDefault();}}
+  if(e.code==='Space'){{toggle();e.preventDefault();}}
   if(e.code==='ArrowUp'){{speed+=10;}} if(e.code==='ArrowDown'){{speed=Math.max(10,speed-10);}}
-  if(e.key==='r'||e.key==='R'){{y=0;window.scrollTo(0,0);run=false;}}
+  if(e.key==='r'||e.key==='R'){{restart();}}
   if(e.key==='m'||e.key==='M'){{document.body.classList.toggle('mirror');}}
   if(e.key==='+'||e.key==='='){{fs+=4;txt.style.fontSize=fs+'px';}} if(e.key==='-'){{fs=Math.max(24,fs-4);txt.style.fontSize=fs+'px';}}
-  document.getElementById('sp').textContent=speed; document.getElementById('st').firstChild.textContent=(run?'running':'paused')+', speed ';
+  status();
  }});
+ play.onclick=toggle; document.getElementById('restart').onclick=restart;
+ document.getElementById('slower').onclick=()=>{{speed=Math.max(10,speed-10);status()}};
+ document.getElementById('faster').onclick=()=>{{speed+=10;status()}};
+ document.getElementById('mirror').onclick=()=>document.body.classList.toggle('mirror');
+ document.getElementById('full').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+ status();
 </script></body></html>"""
 
 

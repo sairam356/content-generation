@@ -14,9 +14,11 @@ transcript/description) + optional note ("saw this, 5M views").
   `memory/done.md`'s "declined" list gets a line when no (so it is not re-suggested).
 
 ## Steps (think like an experienced YouTuber reviewing a competitor's hit)
-1. Get the facts: `python -m pipeline watch <url>` (Gemini) or `python -m pipeline inspect <url>` (meta,
-   transcript, frames). Note channel, views/likes if visible, duration, language, music (title in description /
-   audible), on-screen text, whether it is the creator's own footage or compiled clips.
+1. Get the facts with BOTH independent passes via `/ref`: local inspect provides metadata, transcript timings,
+   frames and the downloaded video; Gemini watches the complete video/audio for motion, delivery, context and
+   audio mood. Reconcile field by field: local/YouTube wins for exact metadata/timing/listed music; Gemini supplies
+   continuous semantics. State conflicts and confidence; never guess a track title. Note whether footage is the
+   creator's own or compiled.
 2. Why it worked: the hook, the emotion (surprise / humour / outrage / usefulness), the format, the timing.
 3. Should WE do it? Judge like a human who knows this channel (`memory/style.md`, `memory/learnings.md`,
    `memory/done.md`): fits our niches? can he say it to camera with credibility? still fresh in a week? can we add

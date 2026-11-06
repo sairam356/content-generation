@@ -16,9 +16,12 @@ Original scripts only; facts verified with sources; no medical/financial claims 
 "consult a professional" line; no reused content, no misleading titles/thumbnails, no copyrighted music; AI
 backgrounds are declared at upload. If a request conflicts with policy, say so and propose a compliant version.
 
-## Human gate
-Exactly one: the owner READS AND APPROVES a script before recording (`script.json: "approved": true`, set by him
-or by his explicit "approved" message). Everything else runs without asking. Never set approved yourself.
+## The owner's only routine action
+Exactly one: the owner records himself reading a panel-reviewed script and drops the video in `inbox/`. Recording
+that script is acceptance; do not ask for a separate script-approval message. Agents choose the strongest daily
+script by default and handle every later stage. Escalate only a safety/legal risk or a genuinely unusable recording
+that requires a retake. The workflow uses Claude subscription + free local tools/YouTube Audio Library: never add a
+paid provider. If Claude usage is exhausted, preserve state and resume after the subscription resets.
 
 ## How you ask (only when a real decision exists)
 Use AskUserQuestion when available, else prose, in this shape:

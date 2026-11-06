@@ -7,9 +7,9 @@ Read `.claude/skills/_shared/preamble.md` first. Arguments: `[count] [focus word
 
 ## Done means
 - `topics/<YYYY-MM-DD>/README.md` table of N ideas with category, channel style, hook, why it travels, sources.
-- Each idea folder `topics/<date>/<nn>-<slug>/` has `script.json` (approved: false), `script.md`, `teleprompter.html`.
+- Each idea folder `topics/<date>/<nn>-<slug>/` has panel-reviewed `script.json` (`approved: true`), `script.md`, `teleprompter.html`.
 - No idea repeats `memory/done.md`, an earlier `topics/*/README.md` from the last 30 days, or another idea today.
-- Reply = the table + "Pick 2, read them, tell me 'approved <nn>'".
+- Reply = the table, name the strongest script to record, and link its teleprompter. Do not ask for separate approval; recording it is acceptance.
 
 ## Steps (think like a content lead planning the week)
 1. Read `memory/style.md`, `memory/learnings.md`, `memory/done.md`, `memory/references.md`.
