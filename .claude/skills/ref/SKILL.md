@@ -11,14 +11,20 @@ Read `.claude/skills/_shared/preamble.md` first.
 - A 5-line summary replied.
 
 ## Steps
-1. Watch it: `python -m pipeline watch <url>` → `Read .state/refs/<id>/analysis.json`.
-   If that fails, `python -m pipeline inspect <url>` → read `meta.json`, `transcript.json`, view `frames.jpg`
-   (24 frames in order) and judge it yourself like an editor pausing a video frame by frame.
-2. Think like a human editor: what made me stop scrolling? where is the person in the frame and why? what is behind
+1. Always run BOTH evidence passes (independent, not primary/fallback):
+   - `python -m pipeline inspect <url>` → hard evidence: YouTube metadata, exact local transcript timings,
+     downloaded video and 24 ordered frames.
+   - `python -m pipeline watch <url>` → Gemini watches the complete video + audio for motion, delivery,
+     scene context, audio mood and why it works. If Gemini is unavailable, mark that analysis incomplete.
+2. Reconcile field by field before judging: YouTube/local evidence wins for metadata, timing and a listed music
+   title; Gemini supplies continuous visual/audio semantics. For every disagreement, state it and lower confidence;
+   never silently choose or invent a music title. Save `evidence: local|gemini|both` and `confidence: high|medium|low`
+   in the reference entry.
+3. Think like a human editor: what made me stop scrolling? where is the person in the frame and why? what is behind
    him? how fast are the cuts? what do the captions look like? where would I have swiped away? what would I steal
    (format) and what must I never copy (words, scenes)?
-3. Write the entry (template at the top of `memory/references.md`): url, channel, topic, duration, hook, beats with
+4. Write the entry (template at the top of `memory/references.md`): url, channel, topic, duration, hook, beats with
    seconds, layout (corner / circle-top / split / full / other, with sizes), background & animation style, colours,
    captions, music, cuts per 10 s, why it works, borrow / never-copy.
-4. If the owner said why it matters ("this layout", "this energy"), add one rule line to `memory/style.md`.
-5. Reply with the 5-line summary. Never paste the transcript into any script.
+5. If the owner said why it matters ("this layout", "this energy"), add one rule line to `memory/style.md`.
+6. Reply with the 5-line summary. Never paste the transcript into any script.
