@@ -118,20 +118,23 @@ def transcribe(media: Path, out: Path | None = None, language: str | None = "te"
     except ImportError:
         sys.exit("[transcribe] faster-whisper missing: .venv\\Scripts\\pip install faster-whisper")
     model_name = config.env("WHISPER_MODEL", "small")
-    print(f"[transcribe] whisper {model_name} on {media.name} ...")
+    print(f"[transcribe] whisper {model_name} on {media.name} ...", flush=True)
     t0 = time.time()
+    print("[transcribe] loading model ...", flush=True)
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
     import wave
     import numpy as np
     with wave.open(str(wav), "rb") as wf:  # decode ourselves: avoids PyAV version mismatches on Windows
         pcm = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    print(f"[transcribe] model loaded in {time.time() - t0:.0f}s; decoding {duration(wav):.1f}s audio ...", flush=True)
     segs, info = model.transcribe(pcm, language=language, word_timestamps=True, vad_filter=True,
                                   vad_parameters={"min_silence_duration_ms": 400})
     words, segments = [], []
-    for s in segs:
+    for n, s in enumerate(segs, 1):
         segments.append({"start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip()})
         for w in s.words or []:
             words.append({"w": w.word.strip(), "s": round(w.start, 2), "e": round(w.end, 2)})
+        print(f"[transcribe] segment {n}: {s.end:.1f}s decoded", flush=True)
     total = duration(wav)
     silences, last = [], 0.0
     for w in words:

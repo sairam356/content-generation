@@ -18,6 +18,7 @@ Set-Location $Root
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 $env:BROLL_PROVIDER = "none"
+$env:WHISPER_MODEL = "tiny"
 $env:Path = "$Root\.venv\Scripts;$env:Path"
 
 New-Item -ItemType Directory -Force -Path ".state", "ready" | Out-Null

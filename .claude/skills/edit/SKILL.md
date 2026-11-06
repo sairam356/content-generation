@@ -17,7 +17,9 @@ Find the script: given, else newest `topics/*/*/script.json` whose hook matches 
 "script <path> is not approved - say 'approved' or run with --no-script". Headless: report and exit.
 
 ## Steps (work like a senior Shorts editor would today)
-1. Context: `memory/style.md`, `memory/references.md`, `memory/learnings.md`, the script.
+1. Claim a workflow keyed by the recording's resolved path using the shared one-owner rule. If another live edit
+   owns this recording, monitor its log; never launch a second transcription/compose against it. Context:
+   `memory/style.md`, `memory/references.md`, `memory/learnings.md`, the script.
 2. `python -m pipeline transcribe <recording>` → `Read words.json`. Whisper's Telugu spelling is unreliable:
    captions come from the SCRIPT; Whisper gives timing only. Map each script sentence to its words.
 3. Decide the cut as a human would - watch for: dead air, breaths > 0.6 s, false starts, repeated takes (keep the

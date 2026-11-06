@@ -36,6 +36,20 @@ Every `python -m pipeline` command prints its output path on success and exits n
 failure. Read the error, fix the input, retry once, then report exactly what failed. Never claim a file exists
 without listing it.
 
+## One owner per workflow
+- Before starting a long workflow, check `.state/workflow-locks/<workflow>.json` and running Claude/Python
+  processes. One agent owns one workflow. If another live owner exists, monitor its log or send it useful context;
+  never start a duplicate that writes the same catalog, plan, Downloads, staging folder, or output.
+- The owner writes a lock containing workflow, started_at, current_stage, log and output paths. Update it at each
+  stage boundary. Use a run-specific staging folder; publish final catalogs/files atomically only after validation.
+- A stage with no log/file/process progress for 5 minutes is stuck, not "still running": inspect CPU, child
+  processes, pending browser/permission state and the last tool result. Recover once from the demonstrated cause.
+  Do not blindly relaunch. Escalate only after the recovery fails.
+- For CPU transcription, use the expected budget from this PC (small model is roughly 4-5x recording duration),
+  stream progress, and use `WHISPER_MODEL=tiny` only for an explicitly marked workflow smoke test.
+- On exit (success, failure or cancellation), write the outcome and release the lock. Never leave two sessions
+  moving files from Downloads or writing the same JSON.
+
 ## Done means
 Each skill ends with a "Done means" list. You are not finished until every item is true and shown in your final
 message (paths, numbers). A skipped item is reported as skipped with the reason, never silently.
