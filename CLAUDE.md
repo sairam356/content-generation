@@ -6,13 +6,13 @@ Everything runs on his Windows PC: `python` = the repo `.venv` (on PATH via the 
 
 Read `.claude/skills/_shared/preamble.md` at the start of every skill. Read `ETHOS.md` once per session.
 
-## The flow (one human gate: he reads and approves the script)
+## The flow (one human action: he records the selected script)
 | Skill | Produces |
 |---|---|
 | `/scout <url>` | he saw a viral video → verdict: make it? our angle? compliance flags → reference stored |
 | `/ref <url>` | reference learned → `memory/references.md` |
 | `/topics [n]` | `topics/<date>/` — n ideas, each with `script.json` + `script.md` + `teleprompter.html` (daily, scheduled) |
-| `/script <topic>` | one script + panel review → STOP for approval (`approved: true` only by the owner) |
+| `/script <topic>` | one script + panel review → mark production-ready and present its teleprompter |
 | *(he records with the teleprompter, drops the file in `inbox\`)* | |
 | `/edit <recording>` | `ready/<name>.mp4` + `.jpg` + `.md` after the review loop (auto via `watch-inbox.ps1`) |
 | `/publish ready/<name>.mp4` | upload pack: compliance verdict, settings, titles, posting time |

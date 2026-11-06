@@ -5,7 +5,7 @@ finds topics, writes scripts, edits the video, checks taste and YouTube rules, r
 
 ```
 channels.txt + web  ──/topics (every morning)──▶  topics\<date>\  10 ideas, each: script + teleprompter
-                                                        │  you read 2, say "approved"
+                                                        │  you record the selected script
                                                         ▼
                                    record on phone/laptop with teleprompter.html
                                                         │  drop the file in inbox\
@@ -34,8 +34,8 @@ claude                            # log in; install the "Claude in Chrome" exten
 ```
 
 ## Every day
-1. Morning: `topics\<date>\README.md` opens → read two `script.md`, reply `approved` in Claude (or set
-   `"approved": true` in `script.json`).
+1. Morning: `topics\<date>\README.md` opens → use the recommended script (or choose another), open its
+   teleprompter and record it. Recording the script is acceptance; no separate approval message.
 2. Open that folder's `teleprompter.html` (SPACE scrolls), record 9:16, good light, look at the lens.
 3. Copy the video into `inbox\` → a few minutes later `ready\<name>.mp4` + thumbnail + metadata.
 4. `claude` → `/publish ready\<name>.mp4` → upload with the settings it gives.

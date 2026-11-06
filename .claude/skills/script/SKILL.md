@@ -30,7 +30,7 @@ Read `.claude/skills/_shared/preamble.md` first. Arguments: `<topic or idea> [--
    say why in the reply.
 6. Save `script.json`, `script.md` (hook, beats, CTA, title/description/hashtags, sources, panel verdict), run
    `python -m pipeline teleprompter <folder>/script.json`.
-7. STOP for approval (human gate). In headless mode just leave `approved: false` and report.
+7. Mark `approved: true` after the panel passes and present the teleprompter for recording. Do not ask for a separate approval; recording the script is acceptance.
 
 ## script.json
 ```json
