@@ -16,7 +16,9 @@ library has ~10,000 tracks and sits behind the owner's Google login, so you brow
 - Reply: the table of picks.
 
 ## Steps (think like a music supervisor choosing beds for talking-head Shorts)
-1. Always select the connected Windows Chrome browser automatically (never Mac, never ask). Then check: Chrome tools available? If `mcp__claude-in-chrome__*` is missing: tell the owner to install the "Claude in
+1. Claim the `music` workflow using the shared one-owner rule. If another live music owner exists, do not browse,
+   download, move files or write catalogs; monitor that owner instead. Always select the connected Windows Chrome
+   browser automatically (never Mac, never ask). Then check: Chrome tools available? If `mcp__claude-in-chrome__*` is missing: tell the owner to install the "Claude in
    Chrome" extension, run `claude` with `/chrome` enabled, and stop.
 2. Open `https://studio.youtube.com` → left menu "Audio Library" → "Free music" tab. Filters: Attribution
    required = "Not required"; Vocals = none (instrumental); Duration 1-3 min; then per mood use the Mood filter
@@ -24,7 +26,9 @@ library has ~10,000 tracks and sits behind the owner's Google login, so you brow
 3. For each mood, scan the list like a human: skip anything with a strong melody that fights speech, pick beds
    with steady rhythm, low-mid energy, no sudden hits; prefer 90-120 BPM for upbeat, < 90 for calm. Preview 3-5,
    choose `count` per mood. Note title, artist, genre, mood, duration.
-4. Click Download for each; move the files from the Downloads folder into `assets/music/` with a clean slug name.
+4. Click Download for each; move the files from the Downloads folder into a run-specific
+   `.state/music_staging/<run-id>/` first. Never move a download another live session may own. After all picks are
+   analyzed and validated, atomically move only this run's final files into `assets/music/`.
 5. Sound effects: Audio Library → "Sound effects" tab. Pick like an editor building a kit: 3 whooshes (short, soft),
    3 pops/clicks (for labels), 2 risers (for the twist beat), 2 subtle impacts, 1 "ding". Download into
    `assets/sfx/` and write `assets/sfx/sfx.json` = [{file, title, kind: whoosh|pop|riser|impact|ding, duration_sec}].

@@ -29,11 +29,16 @@ while ($true) {
     if ($Layout) { $args += " --layout $Layout" }
     claude --model opus -p $args --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" 2>&1 | Tee-Object -FilePath $log
     $out = Get-ChildItem ready -Filter "*.mp4" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $verified = $false
     if ($out -and $out.LastWriteTime -gt (Get-Date).AddMinutes(-90)) {
-      Write-Host "READY: $($out.FullName)" -ForegroundColor Green
+      python -m pipeline verify $out.FullName | Out-File -Append -FilePath $log -Encoding utf8
+      $verified = ($LASTEXITCODE -eq 0)
+    }
+    if ($verified) {
+      Write-Host "READY (verified, full decode ok): $($out.FullName)" -ForegroundColor Green
       try { [System.Media.SystemSounds]::Asterisk.Play() } catch {}
     } else {
-      Write-Host "No output produced - see $log" -ForegroundColor Red
+      Write-Host "No verified output produced - see $log" -ForegroundColor Red
     }
   }
   Start-Sleep $PollSec

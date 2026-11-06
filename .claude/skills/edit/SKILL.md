@@ -6,7 +6,9 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Agent, mcp__claude-in-chrome__*
 Read `.claude/skills/_shared/preamble.md` first. Arguments: `<recording> [script.json] [--layout corner|circle-top|split|full] [--no-script]`.
 
 ## Done means
-- `ready/<name>.mp4`, `ready/<name>.jpg`, `ready/<name>.md` exist (paths listed, duration stated).
+- `ready/<name>.mp4`, `ready/<name>.jpg`, `ready/<name>.md` exist (paths listed, duration stated) and
+  `ready/<name>.verify.json` says `"ok": true` (complete file, faststart, H.264/AAC, full decode with zero errors).
+  A video that is not verified is not done, whatever the panel says.
 - Review loop finished: `python -m pipeline review` facts + specialist panel (designer, end-viewer, compliance,
   reach, comparison → reviewer) and the checklist below all PASS, or the remaining issue is stated.
 - `memory/done.md` has a new line. Reply: what you cut, layout, backgrounds used, music, anything to re-record.
@@ -17,7 +19,9 @@ Find the script: given, else newest `topics/*/*/script.json` whose hook matches 
 "script <path> is not approved - say 'approved' or run with --no-script". Headless: report and exit.
 
 ## Steps (work like a senior Shorts editor would today)
-1. Context: `memory/style.md`, `memory/references.md`, `memory/learnings.md`, the script.
+1. Claim a workflow keyed by the recording's resolved path using the shared one-owner rule. If another live edit
+   owns this recording, monitor its log; never launch a second transcription/compose against it. Context:
+   `memory/style.md`, `memory/references.md`, `memory/learnings.md`, the script.
 2. `python -m pipeline transcribe <recording>` → `Read words.json`. Whisper's Telugu spelling is unreliable:
    captions come from the SCRIPT; Whisper gives timing only. Map each script sentence to its words.
 3. Decide the cut as a human would - watch for: dead air, breaths > 0.6 s, false starts, repeated takes (keep the
@@ -38,6 +42,10 @@ Find the script: given, else newest `topics/*/*/script.json` whose hook matches 
    end card or thumbnail would look better from a template, build it there (9:16, export PNG) into
    `<folder>/canva/` and reference it from the plan as `title_card` / `end_card` / use it as the thumbnail.
 7. Write `<folder>/plan.json` (schema in CLAUDE.md) and run `python -m pipeline compose <folder>/plan.json`.
+   Compose renders to a temp file, runs `verify` (atoms, faststart, codecs, full decode) and only then moves it
+   atomically into `ready/` - so `ready/<name>.mp4` is never half-written. If compose says "failed verification",
+   read the listed errors and fix the cause (plan, inputs, disk); never re-run blindly and never copy the temp
+   file into `ready/` by hand.
    Backgrounds: Veo via ElevenLabs credits per explain beat (cached per beat id). > 8 beats: say the count first.
 8. Review loop (mandatory, max 3 rounds):
    a. `python -m pipeline review ready/<name>.mp4`; view `review/contact.jpg`.
@@ -48,4 +56,6 @@ Find the script: given, else newest `topics/*/*/script.json` whose hook matches 
       every 4-6 s · length within target · audio -14 ± 2 LUFS, no clipping, no silence > 0.8 s · music under the
       voice, licensed · looks like the references.
    d. Anything failing → fix plan.json (or delete `build/bg_<id>*` to regenerate a background) → compose → review.
+      Each compose replaces `ready/<name>.mp4` atomically after verification; `review` re-checks `verify` too
+      (`checks.playable_everywhere`). Finish with `python -m pipeline verify ready/<name>.mp4` and quote its result.
 9. Append to `memory/done.md`: date | name | topic | layout | duration | music | panel verdict. Reply.

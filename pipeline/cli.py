@@ -18,6 +18,7 @@ def main(argv=None):
     t.add_argument("media"); t.add_argument("--out"); t.add_argument("--lang", default="te")
     sub.add_parser("compose", help="plan.json -> ready/<name>.mp4 + .jpg + .md").add_argument("plan")
     sub.add_parser("review", help="QA facts for a video -> review/report.json + contact.jpg").add_argument("video")
+    sub.add_parser("verify", help="prove an mp4 is complete + plays everywhere (full decode); exit 1 if not").add_argument("video")
     a = p.parse_args(argv)
     from . import tools
     if a.cmd == "channels":
@@ -35,6 +36,11 @@ def main(argv=None):
         tools.compose(Path(a.plan))
     elif a.cmd == "review":
         tools.review(Path(a.video))
+    elif a.cmd == "verify":
+        import json
+        rep = tools.verify(Path(a.video))
+        print(json.dumps(rep, ensure_ascii=False, indent=1))
+        sys.exit(0 if rep["ok"] else 1)
     return 0
 
 
