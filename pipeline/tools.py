@@ -402,7 +402,7 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
     elif layout == "circle-top":
         # Presenter in a circle at the TOP-RIGHT (owner's call), leaving the background subject visible and the
         # caption/title zones free. Intentional, not pasted: feathered edge, soft shadow/halo, thin accent ring,
-        # background gently darkened + vignetted so the face reads first.
+        # background stays bright - it is the highlight, the face is secondary.
         d = 470
         c = d / 2
         pad = 80
@@ -410,7 +410,7 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
         cc = cs / 2
         x_right = 48   # margin from the right edge
         y = 150
-        fc = (f"[0:v]eq=brightness=-0.04:saturation=0.95,vignette=PI/5[bgd];"
+        fc = (f"[0:v]eq=saturation=1.06[bgd];"  # background is the hero: keep it bright and sharp, no dimming/vignette
               f"[1:v]crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:ih*0.06,scale={d}:{d},format=rgba,"
               f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(({c}-hypot(X-{c},Y-{c}))*64,0,255)'[p];"
               f"color=c=black:s={cs}x{cs},format=rgba,"
