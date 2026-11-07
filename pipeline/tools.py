@@ -400,14 +400,16 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
     if layout == "corner":
         fc = (f"[1:v]scale=460:-2[p];[0:v][p]overlay=x=40:y=H-h-300:shortest=1,format=yuv420p")
     elif layout == "circle-top":
-        # Intentional, not pasted: feathered edge, soft drop shadow/halo on the background, thin accent ring,
-        # background gently darkened + vignetted so the face reads first and captions stay legible.
-        d = 560
+        # Presenter in a circle at the TOP-RIGHT (owner's call), leaving the background subject visible and the
+        # caption/title zones free. Intentional, not pasted: feathered edge, soft shadow/halo, thin accent ring,
+        # background gently darkened + vignetted so the face reads first.
+        d = 470
         c = d / 2
         pad = 80
         cs = d + pad
         cc = cs / 2
-        y = 180
+        x_right = 48   # margin from the right edge
+        y = 150
         fc = (f"[0:v]eq=brightness=-0.04:saturation=0.95,vignette=PI/5[bgd];"
               f"[1:v]crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:ih*0.06,scale={d}:{d},format=rgba,"
               f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(({c}-hypot(X-{c},Y-{c}))*64,0,255)'[p];"
@@ -415,9 +417,9 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
               f"geq=r='0':g='0':b='0':a='clip(({c + 24}-hypot(X-{cc},Y-{cc}))*7,0,150)'[shadow];"
               f"color=c=0x{acc}:s={cs}x{cs},format=rgba,"
               f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(min(hypot(X-{cc},Y-{cc})-{c + 2},{c + 12}-hypot(X-{cc},Y-{cc}))*64,0,255)'[ring];"
-              f"[bgd][shadow]overlay=x=(W-w)/2:y={y - pad // 2 + 18}:shortest=1[b1];"
-              f"[b1][ring]overlay=x=(W-w)/2:y={y - pad // 2}:shortest=1[b2];"
-              f"[b2][p]overlay=x=(W-w)/2:y={y}:shortest=1,format=yuv420p")
+              f"[bgd][shadow]overlay=x=W-w-{x_right - pad // 2}:y={y - pad // 2 + 18}:shortest=1[b1];"
+              f"[b1][ring]overlay=x=W-w-{x_right - pad // 2}:y={y - pad // 2}:shortest=1[b2];"
+              f"[b2][p]overlay=x=W-w-{x_right}:y={y}:shortest=1,format=yuv420p")
     elif layout == "split":
         fc = (f"[0:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2[top];[1:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2*0.7[bot];"
               f"[top][bot]vstack=inputs=2,format=yuv420p")

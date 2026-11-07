@@ -50,8 +50,8 @@ Workflow smoke test (no paid b-roll, no production-script approval):
 It uses the first recording in `inbox\samples` and must finish with a reviewed MP4 in `ready\`. The result tests
 the machinery; it is not meant for publishing.
 
-Layouts: `corner` (you lower-left over the background — Osm Dhruva look) · `circle-top` (you in a round frame at the
-top) · `split` · `full`. Default lives in `memory\style.md`; per video: `/edit <file> --layout circle-top`.
+Layouts: `corner` (you lower-left over the background — Osm Dhruva look) · `circle-top` (you in a round frame at the top-right,
+no subject covered) · `split` · `full`. Default lives in `memory\style.md`; per video: `/edit <file> --layout circle-top`.
 
 ## Tools (what Claude runs)
 `python -m pipeline channels | watch <url> | inspect <url> | teleprompter <script.json> | transcribe <video> | compose <plan.json> | review <video>`
