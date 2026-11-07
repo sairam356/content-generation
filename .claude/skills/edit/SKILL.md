@@ -48,7 +48,12 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
    atomically into `ready/` - so `ready/<name>.mp4` is never half-written. If compose says "failed verification",
    read the listed errors and fix the cause (plan, inputs, disk); never re-run blindly and never copy the temp
    file into `ready/` by hand.
-   Backgrounds: Veo via ElevenLabs credits per explain beat (cached per beat id). > 8 beats: say the count first.
+   Backgrounds: one per explain beat, cached per beat id (`build/bg_<id>.png|mp4`). `BROLL_PROVIDER=pollinations`
+   (free, default for tests) allows 1 image per 45 s per IP - compose paces and retries itself, so 10 beats take
+   ~8 min; do not run two composes at once. `elevenlabs` = Veo clips on credits; > 8 beats: say the count first.
+   If compose exits with `FAILED: no background for explain beat(s) [...]`, that is the gate working: an explain
+   beat with the presenter full-frame is not the agreed look. Fix the cause (network, provider limit, prompt) and
+   re-run compose (finished backgrounds stay cached). Never set `allow_presenter_fallback` just to get a file out.
 8. Review loop (mandatory, max 3 rounds):
    a. `python -m pipeline review ready/<name>.mp4`; view `review/contact.jpg`.
    b. Panel (Agent, parallel): `designer`, `taste`, `end-viewer`, `compliance`, `reach`, `comparison`; then `reviewer`.

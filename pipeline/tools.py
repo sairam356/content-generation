@@ -300,6 +300,43 @@ def _cut(src: Path, keep: list[list[float]], out: Path) -> Path:
     return out
 
 
+_POLL_NEXT_OK = 0.0  # free Pollinations tier: 1 image per 45 s per IP (HTTP 402 FREE_LIMIT otherwise)
+
+
+def _pollinations_image(full: str, img: Path, attempts: int = 5) -> bool:
+    """Fetch one 9:16 image from the free Pollinations endpoint, pacing requests and honouring its retry hint."""
+    global _POLL_NEXT_OK
+    import urllib.parse
+    import requests
+    url = "https://image.pollinations.ai/prompt/" + urllib.parse.quote(full[:800])
+    params = {"width": 1080, "height": 1920, "nologo": "true"}
+    for attempt in range(1, attempts + 1):
+        wait = _POLL_NEXT_OK - time.time()
+        if wait > 0:
+            print(f"[compose]   pollinations: pacing {wait:.0f}s (free tier = 1 image / 45 s)", flush=True)
+            time.sleep(wait)
+        try:
+            r = requests.get(url, params=params, timeout=180)
+        except requests.RequestException as e:  # noqa: BLE001
+            print(f"[compose]   pollinations error ({str(e)[:100]}); retry {attempt}/{attempts}", file=sys.stderr)
+            _POLL_NEXT_OK = time.time() + 15
+            continue
+        if r.status_code == 200 and r.headers.get("content-type", "").startswith("image/") and len(r.content) > 10_000:
+            img.write_bytes(r.content)
+            _POLL_NEXT_OK = time.time() + 46
+            return True
+        retry = 46.0
+        m = re.search(r"[Rr]etry after (\d+)", r.text[:600])
+        hdr = r.headers.get("Retry-After", "")
+        if m:
+            retry = float(m.group(1)) + 2
+        elif hdr.isdigit():
+            retry = float(hdr) + 2
+        print(f"[compose]   pollinations HTTP {r.status_code}; retry {attempt}/{attempts} in {retry:.0f}s", file=sys.stderr)
+        _POLL_NEXT_OK = time.time() + min(retry, 120)
+    return False
+
+
 def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
     """Background per beat: ElevenLabs Veo clip (credits) or image+zoom; cached by beat id. None -> presenter only."""
     if out.exists():
@@ -326,14 +363,8 @@ def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
                 print(f"[compose]   image failed ({str(e2)[:120]}) - presenter only", file=sys.stderr)
                 return None
     elif provider == "pollinations":
-        import urllib.parse
-        import requests
-        if not img.exists():
-            r = requests.get("https://image.pollinations.ai/prompt/" + urllib.parse.quote(full[:800]),
-                             params={"width": 1080, "height": 1920, "nologo": "true"}, timeout=180)
-            if r.status_code != 200:
-                return None
-            img.write_bytes(r.content)
+        if not img.exists() and not _pollinations_image(full, img):
+            return None
     else:
         return None
     if raw.exists():
@@ -412,6 +443,8 @@ def compose(plan_path: Path) -> Path:
 
     beats = plan["beats"]
     clips, full_frame = [], set()  # full_frame: beat ids shown presenter-only (labels move off the face)
+    provider = config.env("BROLL_PROVIDER", "elevenlabs" if config.env("ELEVENLABS_API_KEY") else "none").lower()
+    missing_bg: list[int] = []  # explain beats that asked for a background the provider could not deliver
     for b in beats:
         s, e = remap(float(b["start"])), remap(float(b["end"]), end=True)
         if e - s < 0.3:
@@ -424,10 +457,20 @@ def compose(plan_path: Path) -> Path:
             continue
         bg = _broll(b, e - s + 0.5, work / f"bg_{b['id']}.mp4", style)
         if bg is None:
-            print(f"[compose]   beat {b['id']}: no background (BROLL_PROVIDER=none or failed) - presenter full-frame")
+            if (b.get("broll_prompt") or "").strip() and provider != "none":
+                missing_bg.append(b["id"])
+                print(f"[compose]   beat {b['id']}: background FAILED ({provider}) - presenter full-frame", file=sys.stderr)
+            else:
+                print(f"[compose]   beat {b['id']}: no background requested - presenter full-frame")
             clips.append(pres); full_frame.add(b["id"])
             continue
         clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s))
+
+    if missing_bg and not plan.get("allow_presenter_fallback"):
+        sys.exit(f"[compose] FAILED: no background for explain beat(s) {missing_bg} (BROLL_PROVIDER={provider}). "
+                 "A Short with the presenter full-frame on explain beats is not the agreed look. Fix the cause "
+                 "(provider limit/network/prompt) and re-run compose - finished backgrounds are cached in build/, "
+                 "only the missing ones are fetched. Set plan.allow_presenter_fallback=true only for a deliberate choice.")
 
     ai_beats = sum(1 for b in beats if b["id"] not in full_frame and (work / f"beat_{b['id']}.mp4") in clips)
     lst = work / "concat.txt"
