@@ -14,15 +14,15 @@
       "TodoWrite",
       "mcp__claude_ai_Canva",
       "mcp__claude_ai_Google_Drive",
-      "mcp__claude-in-chrome",
-      "mcp__plugin_playwright_playwright"
+      "mcp__claude-in-chrome"
     ],
     "deny": [
       "Bash(rm -rf:*)",
       "Bash(git push:*)",
       "Bash(Remove-Item:*)",
       "Bash(rmdir:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "mcp__plugin_playwright_playwright"
     ],
     "defaultMode": "acceptEdits"
   },

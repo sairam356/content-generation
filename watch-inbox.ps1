@@ -32,7 +32,7 @@ while ($true) {
     $args = "/edit $rec"
     if ($Script) { $args += " $Script" }
     if ($Layout) { $args += " --layout $Layout" }
-    claude --model opus -p $args --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent,WebSearch,WebFetch,mcp__claude_ai_Canva,mcp__claude_ai_Google_Drive,mcp__claude-in-chrome,mcp__plugin_playwright_playwright" 2>&1 | Tee-Object -FilePath $log
+    claude --chrome --model opus -p $args --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent,WebSearch,WebFetch,mcp__claude_ai_Canva,mcp__claude_ai_Google_Drive,mcp__claude-in-chrome" --disallowedTools "mcp__plugin_playwright_playwright" 2>&1 | Tee-Object -FilePath $log
     $out = Get-ChildItem ready -Filter "*.mp4" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     $verified = $false
     if ($out -and $out.LastWriteTime -gt (Get-Date).AddMinutes(-90)) {

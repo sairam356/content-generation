@@ -68,7 +68,7 @@ Times are recording seconds (compose remaps after cutting). Hook/CTA = presenter
 generated background (Veo via ElevenLabs when `ELEVENLABS_API_KEY` is set; `BROLL_PROVIDER=none` → presenter only).
 
 ## Canva (his Pro account) and the Audio Library
-Both are used through his logged-in Chrome with the "Claude in Chrome" extension (`mcp__claude-in-chrome__*` tools):
+Both are used through his logged-in Chrome with the "Claude in Chrome" extension (`mcp__claude-in-chrome__*` tools). Browser work = Claude in Chrome ONLY (run headless jobs with `claude --chrome`); never Playwright - its browser has no Canva/YouTube login (owner rule). Canva MCP (`mcp__claude_ai_Canva__*`) for search/copy/edit/export:
 `/music` builds `assets/music/music.json` + `assets/sfx/sfx.json` from the YouTube Audio Library; `/edit` and
 `/publish` may build title/end cards and thumbnails from Canva templates at canva.com (export PNG 9:16).
 compose output: `ready/<name>.mp4`, `.jpg` (1080x1920 thumbnail with title text), `_wide.jpg` (1280x720), `.md`.
