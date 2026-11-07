@@ -1,33 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)",
-      "Bash(python3:*)",
-      "Bash(py:*)",
-      "Bash(.venv\\Scripts\\python.exe:*)",
-      "Bash(ffmpeg:*)",
-      "Bash(ffprobe:*)",
-      "Bash(yt-dlp:*)",
-      "Bash(dir:*)",
-      "Bash(ls:*)",
-      "Bash(type:*)",
-      "Bash(cat:*)",
-      "Bash(move:*)",
-      "Bash(copy:*)",
+      "Bash",
       "Read",
+      "Write",
+      "Edit",
       "Glob",
       "Grep",
       "WebSearch",
       "WebFetch",
       "Agent",
-      "Edit(analytics/**)",
-      "Edit(community/**)",
-      "Edit(topics/**)",
-      "Edit(inbox/**)",
-      "Edit(ready/**)",
-      "Edit(memory/**)",
-      "Edit(assets/music/**)",
-      "mcp__claude-in-chrome__*"
+      "NotebookEdit",
+      "TodoWrite",
+      "mcp__claude_ai_Canva",
+      "mcp__claude_ai_Google_Drive",
+      "mcp__claude-in-chrome",
+      "mcp__plugin_playwright_playwright"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -35,7 +23,8 @@
       "Bash(Remove-Item:*)",
       "Bash(rmdir:*)",
       "Bash(del:*)"
-    ]
+    ],
+    "defaultMode": "acceptEdits"
   },
   "model": "opus",
   "env": {
