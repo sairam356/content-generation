@@ -22,11 +22,15 @@ while ($true) {
     $name = ($f.BaseName -replace '[^\w-]+', '-')
     $job = "inbox\$stamp-$name"
     New-Item -ItemType Directory -Force -Path $job | Out-Null
-    Move-Item $f.FullName "$job\$($f.Name)"
+    # space-free file name: Windows PowerShell 5.1 does not escape embedded quotes for native exes, so a path with
+    # spaces split the -p prompt (e.g. "WhatsApp Video ... .mp4" arrived as "/edit ...\WhatsApp" and the
+    # -Script/-Layout arguments were lost). Keep every token in the prompt free of spaces and quotes.
+    $rec = "$job\$name$($f.Extension.ToLower())"
+    Move-Item $f.FullName $rec
     $log = "$job\claude.log"
-    Write-Host "`n== $(Get-Date -Format HH:mm) editing $($f.Name) -> $job" -ForegroundColor Yellow
-    $args = "/edit `"$job\$($f.Name)`""
-    if ($Script) { $args += " `"$Script`"" }
+    Write-Host "`n== $(Get-Date -Format HH:mm) editing $($f.Name) -> $rec" -ForegroundColor Yellow
+    $args = "/edit $rec"
+    if ($Script) { $args += " $Script" }
     if ($Layout) { $args += " --layout $Layout" }
     claude --model opus -p $args --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" 2>&1 | Tee-Object -FilePath $log
     $out = Get-ChildItem ready -Filter "*.mp4" | Sort-Object LastWriteTime -Descending | Select-Object -First 1

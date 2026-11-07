@@ -349,7 +349,8 @@ def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
     return out
 
 
-def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: float = 1.0, grade: str = "") -> Path:
+def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: float = 1.0, grade: str = "",
+                       frames: int | None = None) -> Path:
     """Presenter full-frame. zoom > 1 = editor's punch-in (crop anchored near the top so the head is not clipped).
     grade = optional ffmpeg filter (e.g. "eq=gamma=1.12") from plan.json to lift an under-exposed face."""
     vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}"
@@ -357,13 +358,19 @@ def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: flo
         vf += f",scale={round(W * zoom / 2) * 2}:{round(H * zoom / 2) * 2},crop={W}:{H}:(iw-{W})/2:(ih-{H})*0.08"
     if grade:
         vf += f",{grade}"
+    # frames = exact frame count, so per-beat clips never round up and drift the picture behind the voice
+    exact = ["-frames:v", str(frames)] if frames else []
     _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.3f}", "-to", f"{end:.3f}", "-i", str(cut), "-an",
-          "-vf", f"{vf},fps={FPS},format=yuv420p",
-          "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
+          "-vf", f"{vf},fps={FPS}" + (",tpad=stop_mode=clone:stop=3" if frames else "") + ",format=yuv420p",
+          *exact, "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
     return out
 
 
-def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: float) -> Path:
+CIRCLE_TOP = 262          # circle-top presenter y: ring (d+24) spans 250..834, below the ~250 px Shorts top UI band
+CIRCLE_LABEL_Y = 886     # circle-top label hangs just under the ring, keeping the subject band (900-1380) clear
+
+
+def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: float, frames: int | None = None) -> Path:
     """Composite presenter over/beside the background according to the layout template."""
     acc = accent.lstrip("#")
     if layout == "corner":
@@ -374,14 +381,15 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
               f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow(X-{d / 2},2)+pow(Y-{d / 2},2),pow({d / 2},2)),255,0)'[p];"
               f"color=c=0x{acc}:s={d + 24}x{d + 24},format=rgba,"
               f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow(X-{(d + 24) / 2},2)+pow(Y-{(d + 24) / 2},2),pow({(d + 24) / 2},2)),255,0)'[ring];"
-              f"[0:v][ring]overlay=x=(W-w)/2:y=168:shortest=1[b1];[b1][p]overlay=x=(W-w)/2:y=180:shortest=1,format=yuv420p")
+              f"[0:v][ring]overlay=x=(W-w)/2:y={CIRCLE_TOP - 12}:shortest=1[b1];[b1][p]overlay=x=(W-w)/2:y={CIRCLE_TOP}:shortest=1,format=yuv420p")
     elif layout == "split":
         fc = (f"[0:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2[top];[1:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2*0.7[bot];"
               f"[top][bot]vstack=inputs=2,format=yuv420p")
     else:
         return pres
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(bg), "-i", str(pres), "-filter_complex", fc, "-r", str(FPS),
-          "-t", f"{seconds:.3f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
+          *(["-frames:v", str(frames)] if frames else ["-t", f"{seconds:.3f}"]),
+          "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
     return out
 
 
@@ -416,8 +424,11 @@ def compose(plan_path: Path) -> Path:
         s, e = remap(float(b["start"])), remap(float(b["end"]), end=True)
         if e - s < 0.3:
             continue
+        # snap beat edges to the frame grid: clip lengths are whole frames and their sum equals the cut (lip sync)
+        s, e = round(s * FPS) / FPS, round(e * FPS) / FPS
+        nf = round((e - s) * FPS)
         kind = b.get("kind", "explain")
-        pres = _presenter_segment(cut, s, e, work / f"pres_{b['id']}.mp4", float(b.get("zoom", 1.0)), plan.get("grade", ""))
+        pres = _presenter_segment(cut, s, e, work / f"pres_{b['id']}.mp4", float(b.get("zoom", 1.0)), plan.get("grade", ""), nf)
         print(f"[compose] beat {b['id']} ({kind}, {e - s:.1f}s)")
         if kind in ("hook", "cta") or layout == "full":
             clips.append(pres); full_frame.add(b["id"])
@@ -427,7 +438,7 @@ def compose(plan_path: Path) -> Path:
             print(f"[compose]   beat {b['id']}: no background (BROLL_PROVIDER=none or failed) - presenter full-frame")
             clips.append(pres); full_frame.add(b["id"])
             continue
-        clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s))
+        clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s, nf))
 
     ai_beats = sum(1 for b in beats if b["id"] not in full_frame and (work / f"beat_{b['id']}.mp4") in clips)
     lst = work / "concat.txt"
@@ -443,8 +454,9 @@ def compose(plan_path: Path) -> Path:
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
         # Shorts safe zone: keep text out of the top ~220 px (search/menu) and bottom ~420 px (title/channel/buttons)
-        f"Style: Cap,{font},86,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,0,2,60,60,440,1",
-        f"Style: CapHi,{font},86,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,0,2,60,60,440,1",
+        # soft drop shadow (BackColour) so white captions survive white steam / bright backgrounds
+        f"Style: Cap,{font},86,&H00FFFFFF,&H00FFFFFF,&H00000000,&H70000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,440,1",
+        f"Style: CapHi,{font},86,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H70000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,440,1",
         f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,280,1",
         f"Style: Label,{font},64,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,8,90,90,1040,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -458,13 +470,16 @@ def compose(plan_path: Path) -> Path:
     for b in beats:
         lab = (b.get("label_te") or "").strip()
         if lab and b.get("kind", "explain") not in ("hook", "cta"):
-            mv = 300 if b["id"] in full_frame else 0  # presenter full-frame: label in the top band (below the ~250 px UI band), not on the face
+            # presenter full-frame: label in the top band (below the ~250 px UI band), not on the face;
+            # circle-top: label hangs under the ring instead of sitting on the background's subject
+            mv = 300 if b["id"] in full_frame else (CIRCLE_LABEL_Y if (b.get("layout") or layout) == "circle-top" else 0)
             ass.append(f"Dialogue: 1,{_ass_time(remap(float(b['start'])))},{_ass_time(remap(float(b['end']), end=True))},Label,,0,0,{mv},,{_esc(lab)}")
         for c in b.get("captions", []):
             cs, ce = remap(float(c["start"])), remap(float(c["end"]), end=True)
             if ce - cs < 0.15:
                 continue
-            ass.append(f"Dialogue: 0,{_ass_time(cs)},{_ass_time(ce - 0.03)},Cap,,0,0,0,,{_esc(c['text'])}")
+            style_name = "CapHi" if c.get("hi") else "Cap"  # "hi": true = accent-colour caption for the key number/word
+            ass.append(f"Dialogue: 0,{_ass_time(cs)},{_ass_time(ce - 0.03)},{style_name},,0,0,0,,{_esc(c['text'])}")
     ass_path = work / "captions.ass"
     ass_path.write_text("\n".join(ass), encoding="utf-8")
 
@@ -480,7 +495,8 @@ def compose(plan_path: Path) -> Path:
     if music:
         mpath = Path(music) if Path(music).is_absolute() else config.ROOT / music
         cmd += ["-stream_loop", "-1", "-i", str(mpath)]
-        fc += f";[{idx}:a]volume={float(plan.get('music_volume', 0.08))},afade=t=out:st={max(0.0, remap.total - 1.5):.2f}:d=1.5[m]"
+        fade = float(plan.get("music_fade_sec", 1.5))  # short fade = music carries the end hold instead of dying under the last line
+        fc += f";[{idx}:a]volume={float(plan.get('music_volume', 0.08))},afade=t=out:st={max(0.0, remap.total - fade):.2f}:d={fade}[m]"
         mix.append("[m]"); idx += 1
     # sound effects: [{"at": recording_sec | "out": output_sec, "file": "assets/sfx/whoosh.mp3", "gain": 0.5}]
     for n, fx in enumerate(plan.get("sfx", [])):
@@ -601,8 +617,11 @@ def thumbnail(video: Path, at: float, text: str, accent: str, out: Path, font: s
     text = re.sub(r"[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F]", "", text).strip()  # fonts lack emoji
     words = text.split()
     lines = [" ".join(words[:len(words) // 2 or 1]), " ".join(words[len(words) // 2 or 1:])] if len(words) > 3 else [text]
-    txt = "\\N".join(_esc(l) for l in lines if l)
     acc = accent.lstrip("#")
+    lines = [_esc(l) for l in lines if l]
+    if len(lines) == 2:  # second line (usually the number/payoff) in the accent colour, slightly larger
+        lines[1] = "{\\c&H" + acc[4:6] + acc[2:4] + acc[0:2] + "&\\fscx115\\fscy115}" + lines[1]
+    txt = "\\N".join(lines)
     ass = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {W}", f"PlayResY: {H}", "", "[V4+ Styles]",
            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
            f"Style: T,{font},118,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,9,4,8,50,50,110,1",
@@ -612,8 +631,8 @@ def thumbnail(video: Path, at: float, text: str, accent: str, out: Path, font: s
     ass_p = out.with_suffix(".thumb.ass"); ass_p.write_text("\n".join(ass), encoding="utf-8")
     ass_arg = ass_p.resolve().as_posix().replace(":", "\\:")
     # title band kept in the top 420 px (above the head in a normal selfie framing); accent rule centred under it
-    vf = (f"eq=contrast=1.08:saturation=1.15,drawbox=x=0:y=0:w={W}:h=420:color=black@0.45:t=fill,"
-          f"drawbox=x={(W - 360) // 2}:y=400:w=360:h=14:color=0x{acc}:t=fill,subtitles='{ass_arg}'")
+    vf = (f"eq=contrast=1.08:saturation=1.15,drawbox=x=0:y=0:w={W}:h=450:color=black@0.5:t=fill,"
+          f"drawbox=x={(W - 360) // 2}:y=436:w=360:h=14:color=0x{acc}:t=fill,subtitles='{ass_arg}'")
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(frame), "-vf", vf, "-frames:v", "1", "-q:v", "2", str(out)])
     wide = out.with_name(out.stem + "_wide.jpg")
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(out), "-vf", "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720", "-q:v", "2", str(wide)])
