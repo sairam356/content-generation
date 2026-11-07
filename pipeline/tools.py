@@ -374,7 +374,7 @@ def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
     else:
         frames = max(int(seconds * FPS), FPS)
         _run(["ffmpeg", "-y", "-v", "error", "-i", str(img), "-vf",
-              f"scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840,"
+              f"crop=iw:ih*0.94:0:0,scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840,"
               f"zoompan=z='min(zoom+{0.25 / frames:.6f},1.25)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS},format=yuv420p",
               "-frames:v", str(frames), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", str(out)])
     return out
@@ -400,12 +400,24 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
     if layout == "corner":
         fc = (f"[1:v]scale=460:-2[p];[0:v][p]overlay=x=40:y=H-h-300:shortest=1,format=yuv420p")
     elif layout == "circle-top":
+        # Intentional, not pasted: feathered edge, soft drop shadow/halo on the background, thin accent ring,
+        # background gently darkened + vignetted so the face reads first and captions stay legible.
         d = 560
-        fc = (f"[1:v]crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:ih*0.06,scale={d}:{d},format=rgba,"
-              f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow(X-{d / 2},2)+pow(Y-{d / 2},2),pow({d / 2},2)),255,0)'[p];"
-              f"color=c=0x{acc}:s={d + 24}x{d + 24},format=rgba,"
-              f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow(X-{(d + 24) / 2},2)+pow(Y-{(d + 24) / 2},2),pow({(d + 24) / 2},2)),255,0)'[ring];"
-              f"[0:v][ring]overlay=x=(W-w)/2:y=168:shortest=1[b1];[b1][p]overlay=x=(W-w)/2:y=180:shortest=1,format=yuv420p")
+        c = d / 2
+        pad = 80
+        cs = d + pad
+        cc = cs / 2
+        y = 180
+        fc = (f"[0:v]eq=brightness=-0.04:saturation=0.95,vignette=PI/5[bgd];"
+              f"[1:v]crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:ih*0.06,scale={d}:{d},format=rgba,"
+              f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(({c}-hypot(X-{c},Y-{c}))*64,0,255)'[p];"
+              f"color=c=black:s={cs}x{cs},format=rgba,"
+              f"geq=r='0':g='0':b='0':a='clip(({c + 24}-hypot(X-{cc},Y-{cc}))*7,0,150)'[shadow];"
+              f"color=c=0x{acc}:s={cs}x{cs},format=rgba,"
+              f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(min(hypot(X-{cc},Y-{cc})-{c + 2},{c + 12}-hypot(X-{cc},Y-{cc}))*64,0,255)'[ring];"
+              f"[bgd][shadow]overlay=x=(W-w)/2:y={y - pad // 2 + 18}:shortest=1[b1];"
+              f"[b1][ring]overlay=x=(W-w)/2:y={y - pad // 2}:shortest=1[b2];"
+              f"[b2][p]overlay=x=(W-w)/2:y={y}:shortest=1,format=yuv420p")
     elif layout == "split":
         fc = (f"[0:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2[top];[1:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2*0.7[bot];"
               f"[top][bot]vstack=inputs=2,format=yuv420p")
