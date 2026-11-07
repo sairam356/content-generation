@@ -7,7 +7,7 @@
 
 ## Look (defaults - refine with /ref)
 - Layout: `corner` (presenter lower-left over a relevant animated background) - the Osm Dhruva look; alternative
-  `circle-top` (presenter in a round frame at the top-right, background subject left visible) chosen per video.
+  `circle-top` (presenter in a round frame at the top-right, background subject left visible); split (visual on the top half, owner reacting on the bottom half, caption under his face - second approved style, pick per video from the reference) chosen per video.
 - Accent colour: #ffd54a. Captions: big, white, 2-4 words, bottom third. Top label: 2-4 Telugu words per beat.
 - Backgrounds: photoreal, relevant to the exact sentence, slow camera move, no text, no faces.
 

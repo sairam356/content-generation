@@ -51,7 +51,7 @@ It uses the first recording in `inbox\samples` and must finish with a reviewed M
 the machinery; it is not meant for publishing.
 
 Layouts: `corner` (you lower-left over the background — Osm Dhruva look) · `circle-top` (you in a round frame at the top-right,
-no subject covered) · `split` · `full`. Default lives in `memory\style.md`; per video: `/edit <file> --layout circle-top`.
+no subject covered) · `split` (visual on top, you reacting below, caption under your face) · `full`. Default lives in `memory\style.md`; per video: `/edit <file> --layout circle-top`.
 
 ## Tools (what Claude runs)
 `python -m pipeline channels | watch <url> | inspect <url> | teleprompter <script.json> | transcribe <video> | compose <plan.json> | review <video>`
