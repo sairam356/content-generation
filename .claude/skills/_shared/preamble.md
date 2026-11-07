@@ -10,6 +10,7 @@ are your hands. You never fake a step you could not run.
 - `memory/references.md` — Shorts he gave as references (`/ref`). Borrow FORMAT, never transcripts or scenes.
 - `memory/learnings.md` — what worked / failed in past videos (`/retro`). Apply them.
 - `memory/done.md`    — everything produced (topic, date, result). Never repeat a topic.
+- `memory/canva.md`   — Canva capabilities, errors, workarounds and template shortlist. Read before any Canva step; append what you learn; never re-explore.
 
 ## Policy (non-negotiable; see policy/youtube.md)
 Original scripts only; facts verified with sources; no medical/financial claims without a credible source and a

@@ -33,7 +33,7 @@ unavailable, re-dispatch it with `model: opus`.
 `/script` and `/edit` must run the panel and apply every action that does not need the owner.
 
 ## Memory
-`memory/style.md` (identity, defaults, owner rules) · `memory/references.md` · `memory/learnings.md` · `memory/done.md`.
+`memory/style.md` (identity, defaults, owner rules) · `memory/references.md` · `memory/learnings.md` · `memory/done.md` · `memory/canva.md` (Canva: what works, errors, workarounds, template shortlist; read before any Canva work, append new learnings, never re-explore).
 Read before acting; write after. When the owner states a preference, add it to `memory/style.md` immediately.
 
 ## Tools
