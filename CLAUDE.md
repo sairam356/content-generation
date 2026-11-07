@@ -50,7 +50,7 @@ All exit non-zero with a reason on failure and print the output path on success.
 
 ## plan.json (input of compose)
 ```json
-{"recording":"inbox/20261106-take1/take1.mp4","name":"why-idli-is-soft","layout":"corner|circle-top|split|full",
+{"recording":"inbox/20261106-take1/take1.mp4","name":"why-idli-is-soft","layout":"corner|circle-top|split|full","face_y":0.42,
  "accent":"#ffd54a","broll_style":"clean photoreal, warm light, slow push-in",
  "title_te":"...","description_te":"...","hashtags":["#Shorts"],
  "music":"assets/music/curious-01.mp3","music_volume":0.08,
@@ -61,6 +61,9 @@ All exit non-zero with a reason on failure and print the output path on success.
  "sfx":[{"at":4.0,"file":"assets/sfx/whoosh-soft.mp3","gain":0.4}],
  "thumbnail_sec":1.2,"thumbnail_text_te":"ఇడ్లీ ఎందుకు మెత్తగా?"}
 ```
+`face_y` = where his face centre sits in the recording (0 top … 1 bottom; read it off the contact sheet) - every layout crops
+the presenter around it. Styles: `circle-top` = background is the hero, he is a small circle top-right; `split` = visual top
+half, he reacts in the bottom half, caption under his face (pick per video from the reference's format).
 Times are recording seconds (compose remaps after cutting). Hook/CTA = presenter full-frame. Explain beats get a
 generated background (Veo via ElevenLabs when `ELEVENLABS_API_KEY` is set; `BROLL_PROVIDER=none` → presenter only).
 

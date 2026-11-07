@@ -394,8 +394,13 @@ def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: flo
     return out
 
 
-def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: float) -> Path:
-    """Composite presenter over/beside the background according to the layout template."""
+def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: float, face_y: float = 0.42) -> Path:
+    """Composite presenter over/beside the background according to the layout template.
+
+    face_y = where the owner's face centre sits in HIS recording (0 = top, 1 = bottom; plan.face_y, default 0.42):
+    every crop of the presenter is centred on it, so the face lands in the frame and not under the caption.
+    """
+    face_y = min(max(float(face_y), 0.15), 0.85)
     acc = accent.lstrip("#")
     if layout == "corner":
         fc = (f"[1:v]scale=460:-2[p];[0:v][p]overlay=x=40:y=H-h-300:shortest=1,format=yuv420p")
@@ -411,7 +416,7 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
         x_right = 48   # margin from the right edge
         y = 150
         fc = (f"[0:v]eq=saturation=1.06[bgd];"  # background is the hero: keep it bright and sharp, no dimming/vignette
-              f"[1:v]crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:ih*0.06,scale={d}:{d},format=rgba,"
+              f"[1:v]crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:'clip(ih*{face_y}-oh/2,0,ih-oh)',scale={d}:{d},format=rgba,"
               f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(({c}-hypot(X-{c},Y-{c}))*64,0,255)'[p];"
               f"color=c=black:s={cs}x{cs},format=rgba,"
               f"geq=r='0':g='0':b='0':a='clip(({c + 24}-hypot(X-{cc},Y-{cc}))*7,0,150)'[shadow];"
@@ -421,7 +426,10 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
               f"[b1][ring]overlay=x=W-w-{x_right - pad // 2}:y={y - pad // 2}:shortest=1[b2];"
               f"[b2][p]overlay=x=W-w-{x_right}:y={y}:shortest=1,format=yuv420p")
     elif layout == "split":
-        fc = (f"[0:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2[top];[1:v]crop={W}:{H // 2}:0:(ih-{H // 2})/2*0.7[bot];"
+        # Reference look: topic visual on the top half, the presenter reacting on the bottom half, caption over the
+        # presenter. Background crop sits a little above centre (where the generated subject usually is);
+        # presenter crop puts the face ~38% down the bottom half so the caption band (bottom 440 px) covers chest, not face.
+        fc = (f"[0:v]crop={W}:{H // 2}:0:(ih-{H // 2})*0.4[top];[1:v]scale=iw*1.12:-2,crop={W}:{H // 2}:(iw-{W})/2:'clip(ih*{face_y}-{H // 2}*0.38,0,ih-{H // 2})'[bot];"
               f"[top][bot]vstack=inputs=2,format=yuv420p")
     else:
         return pres
@@ -478,7 +486,8 @@ def compose(plan_path: Path) -> Path:
                 print(f"[compose]   beat {b['id']}: no background requested - presenter full-frame")
             clips.append(pres); full_frame.add(b["id"])
             continue
-        clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s))
+        clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s,
+                             float(plan.get("face_y", 0.42))))
 
     if missing_bg and not plan.get("allow_presenter_fallback"):
         sys.exit(f"[compose] FAILED: no background for explain beat(s) {missing_bg} (BROLL_PROVIDER={provider}). "

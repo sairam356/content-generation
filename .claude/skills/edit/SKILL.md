@@ -40,6 +40,9 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
    into the twist beat, never more than one SFX per 3 s, gains 0.3-0.5. Put them in `plan.sfx`
    ([{at: recording_sec, file, gain}]). Thumbnail: `thumbnail_text_te` = the hook in ≤ 6 words, `thumbnail_sec` =
    the frame where his face is most expressive (pick from the contact sheet after the first compose).
+   `face_y` = his face centre as a fraction of the recording height (contact sheet; phone selfies are usually 0.35-0.45) -
+   layouts crop around it. Layout per video: `circle-top` when the background subject must stay the hero,
+   `split` when the reference format is "visual top / reaction bottom"; never cover his face with a caption.
    Canva (optional, via Chrome tools `mcp__claude-in-chrome__*`, his Pro account at canva.com): when a title card,
    end card or thumbnail would look better from a template, build it there (9:16, export PNG) into
    `<folder>/canva/` and reference it from the plan as `title_card` / `end_card` / use it as the thumbnail.
