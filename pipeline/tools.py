@@ -609,6 +609,7 @@ def compose(plan_path: Path) -> Path:
                  "only the missing ones are fetched. Set plan.allow_presenter_fallback=true only for a deliberate choice.")
 
     ai_beats = sum(1 for b in beats if b["id"] not in full_frame and (work / f"beat_{b['id']}.mp4") in clips)
+    wipes: dict = {}  # beat id -> (wipe_in, wipe_out); labels stay off the wipe frames
     for i, clip in enumerate(clips):
         beat = clip_beats[i]
         beat_id = beat["id"]
@@ -617,6 +618,7 @@ def compose(plan_path: Path) -> Path:
                    (background or clip_beats[i - 1]["id"] not in full_frame))
         wipe_out = (transition == "wipe" and i + 1 < len(clips) and
                     (background or clip_beats[i + 1]["id"] not in full_frame))
+        wipes[beat_id] = (wipe_in, wipe_out)
         before = _frame_count(clip)
         if before != clip_frame_counts[i]:
             sys.exit(f"[compose] beat {beat_id}: expected {clip_frame_counts[i]} frames, found {before} before wipe")
@@ -662,7 +664,12 @@ def compose(plan_path: Path) -> Path:
             circle_label = b["id"] not in full_frame and (b.get("layout") or layout) == "circle-top"
             style_name = "LabelCircle" if circle_label else "Label"
             mv = 0 if circle_label else (300 if b["id"] in full_frame else 0)
-            ass.append(f"Dialogue: 1,{_ass_time(remap(float(b['start'])))},{_ass_time(remap(float(b['end']), end=True))},{style_name},,0,0,{mv},,{_esc(lab)}")
+            ls, le = remap(float(b["start"])), remap(float(b["end"]), end=True)
+            w_in, w_out = wipes.get(b["id"], (False, False))
+            pad = int(transition_sec * FPS / 2 + 0.5) / FPS
+            ls, le = ls + (pad if w_in else 0), le - (pad if w_out else 0)
+            if le - ls > 0.2:
+                ass.append(f"Dialogue: 1,{_ass_time(ls)},{_ass_time(le)},{style_name},,0,0,{mv},,{_esc(lab)}")
         for c in b.get("captions", []):
             cs, ce = remap(float(c["start"])), remap(float(c["end"]), end=True)
             if ce - cs < 0.15:
