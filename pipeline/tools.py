@@ -26,6 +26,7 @@ from . import config
 W, H, FPS = 1080, 1920, 30
 VIDEO_EXT = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
 LAYOUTS = ("corner", "circle-top", "split", "full")
+BACKGROUND_MOTIONS = ("push-in", "pan-right", "pull-out", "pan-left")
 
 
 def _run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
@@ -337,10 +338,8 @@ def _pollinations_image(full: str, img: Path, attempts: int = 5) -> bool:
     return False
 
 
-def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
-    """Background per beat: ElevenLabs Veo clip (credits) or image+zoom; cached by beat id. None -> presenter only."""
-    if out.exists():
-        return out
+def _broll(beat: dict, seconds: float, out: Path, style: str, motion: str = "push-in") -> Path | None:
+    """Background per beat: cached Veo clip or motion-specific render from a cached still."""
     prompt = (beat.get("broll_prompt") or "").strip()
     if not prompt:
         return None
@@ -349,21 +348,31 @@ def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
     provider = config.env("BROLL_PROVIDER", "elevenlabs" if config.env("ELEVENLABS_API_KEY") else "none").lower()
     raw = out.with_name(out.stem + "_raw.mp4")
     img = out.with_suffix(".png")
-    if provider == "elevenlabs":
+    motion = beat.get("motion") or motion
+    if motion not in BACKGROUND_MOTIONS:
+        sys.exit(f"[compose] beat {beat['id']}: motion must be one of {BACKGROUND_MOTIONS}")
+    still_out = out.with_name(f"{out.stem}_{motion}.mp4")
+    if raw.exists() and out.exists():
+        return out
+    if not raw.exists() and still_out.exists():
+        return still_out
+    if raw.exists():
+        pass
+    elif img.exists():
+        pass
+    elif provider == "elevenlabs":
         from . import xi_media
         try:
-            if not raw.exists():
-                xi_media.generate_video(full, raw)
+            xi_media.generate_video(full, raw)
         except Exception as e:  # noqa: BLE001
             print(f"[compose]   veo failed ({str(e)[:120]}) - trying still image", file=sys.stderr)
             try:
-                if not img.exists():
-                    xi_media.generate_image(full, img)
+                xi_media.generate_image(full, img)
             except Exception as e2:  # noqa: BLE001
                 print(f"[compose]   image failed ({str(e2)[:120]}) - presenter only", file=sys.stderr)
                 return None
     elif provider == "pollinations":
-        if not img.exists() and not _pollinations_image(full, img):
+        if not _pollinations_image(full, img):
             return None
     else:
         return None
@@ -373,11 +382,25 @@ def _broll(beat: dict, seconds: float, out: Path, style: str) -> Path | None:
               "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", str(out)])
     else:
         frames = max(int(seconds * FPS), FPS)
+        p = f"min(on/{frames - 1},1)"
+        ease = f"({p})*({p})*(3-2*({p}))"
+        zoom = {
+            "push-in": f"1+0.25*{ease}",
+            "pan-right": "1.15",
+            "pull-out": f"1.25-0.25*{ease}",
+            "pan-left": "1.15",
+        }[motion]
+        x = {
+            "push-in": "iw/2-(iw/zoom/2)",
+            "pan-right": f"(iw-iw/zoom)*{ease}",
+            "pull-out": "iw/2-(iw/zoom/2)",
+            "pan-left": f"(iw-iw/zoom)*(1-{ease})",
+        }[motion]
         _run(["ffmpeg", "-y", "-v", "error", "-i", str(img), "-vf",
               f"crop=iw:ih*0.94:0:0,scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840,"
-              f"zoompan=z='min(zoom+{0.25 / frames:.6f},1.25)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS},format=yuv420p",
-              "-frames:v", str(frames), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", str(out)])
-    return out
+              f"zoompan=z='{zoom}':d={frames}:x='{x}':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS},format=yuv420p",
+              "-frames:v", str(frames), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", str(still_out)])
+    return out if raw.exists() else still_out
 
 
 def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: float = 1.0, grade: str = "",
@@ -395,9 +418,6 @@ def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: flo
           "-vf", f"{vf},fps={FPS}" + (",tpad=stop_mode=clone:stop=3" if frames else "") + ",format=yuv420p",
           *exact, "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
     return out
-
-
-CIRCLE_LABEL_Y = 680     # circle-top label sits just under the top-right ring (ring bottom ~632), off the subject band
 
 
 def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: float, face_y: float = 0.42,
@@ -446,6 +466,76 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
     return out
 
 
+def _frame_count(path: Path) -> int:
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
+                        "-show_entries", "stream=nb_read_frames", "-of", "default=noprint_wrappers=1:nokey=1",
+                        str(path)], capture_output=True, text=True)
+    if r.returncode != 0 or not r.stdout.strip():
+        sys.exit(f"[compose] could not count frames in {path}: {r.stderr[-1000:]}")
+    return int(r.stdout.strip())
+
+
+def _wipe(clip: Path, out: Path, accent: str, wipe_in: bool, wipe_out: bool,
+          sec: float, frames: int) -> Path:
+    """Overlay a short diagonal accent wipe without changing this clip's frame count."""
+    requested = max(1, int(sec * FPS / 2 + 0.5))
+    side_frames = min(requested, frames // 2 if wipe_in and wipe_out else frames)
+    in_frames = side_frames if wipe_in else 0
+    out_frames = side_frames if wipe_out else 0
+    parts: list[tuple[int, int, str | None]] = []
+    if wipe_in:
+        parts.append((0, in_frames, "in"))
+    middle_end = frames - out_frames
+    if middle_end > in_frames:
+        parts.append((in_frames, middle_end, None))
+    if wipe_out:
+        parts.append((frames - out_frames, frames, "out"))
+
+    source_labels = "".join(f"[src{i}]" for i in range(len(parts)))
+    graph = [f"[0:v]split={len(parts)}{source_labels}"]
+    outputs = []
+    rgb = [int(accent[i:i + 2], 16) for i in (1, 3, 5)]
+    u = "((X/W+Y/H)/2)"
+    for i, (start, end, direction) in enumerate(parts):
+        label = f"seg{i}"
+        graph.append(f"[src{i}]trim=start_frame={start}:end_frame={end},setpts=PTS-STARTPTS[{label}]")
+        if direction is None:
+            outputs.append(f"[{label}]")
+            continue
+
+        count = end - start
+        progress_duration = max((count - 1) / FPS, 1 / FPS)
+        edge = f"(1-clip(T/{progress_duration:.6f},0,1))"
+        if direction == "out":
+            covered = f"gte({u},{edge})"
+            colors = [
+                f"if(gte({u},{edge}+0.14),{c},if(gte({u},{edge}+0.07),{c80},if(gte({u},{edge}),{c50},0)))"
+                for c in rgb
+                for c50, c80 in [(round((c + 255) / 2), round(c * 0.2 + 255 * 0.8))]
+            ]
+        else:
+            covered = f"lt({u},{edge})"
+            colors = [
+                f"if(lt({u},{edge}-0.14),{c},if(lt({u},{edge}-0.07),{c80},if(lt({u},{edge}),{c50},0)))"
+                for c in rgb
+                for c50, c80 in [(round((c + 255) / 2), round(c * 0.2 + 255 * 0.8))]
+            ]
+        mask = f"mask{i}"
+        graph.append(
+            f"color=c=white:s={W}x{H}:r={FPS}:d={count / FPS:.6f},format=rgba,"
+            f"geq=r='{colors[0]}':g='{colors[1]}':b='{colors[2]}':a='if({covered},255,0)',"
+            f"trim=end_frame={count},setpts=PTS-STARTPTS[{mask}]"
+        )
+        wiped = f"wiped{i}"
+        graph.append(f"[{label}][{mask}]overlay=shortest=1:format=auto[{wiped}]")
+        outputs.append(f"[{wiped}]")
+    graph.append(f"{''.join(outputs)}concat=n={len(outputs)}:v=1:a=0[outv]")
+    _run(["ffmpeg", "-y", "-v", "error", "-i", str(clip), "-filter_complex", ";".join(graph),
+          "-map", "[outv]", "-frames:v", str(frames), "-an", "-c:v", "libx264", "-preset", "veryfast",
+          "-crf", "16", "-pix_fmt", "yuv420p", str(out)])
+    return out
+
+
 def compose(plan_path: Path) -> Path:
     """plan.json (written by Claude, schema in CLAUDE.md) -> ready/<name>.mp4 (+ .jpg thumbnail, .md metadata)."""
     plan_path = Path(plan_path)
@@ -464,6 +554,12 @@ def compose(plan_path: Path) -> Path:
     if layout not in LAYOUTS:
         sys.exit(f"[compose] layout must be one of {LAYOUTS}")
     accent = plan.get("accent", "#ffd54a")
+    transition = plan.get("transition", "wipe")
+    if transition not in ("wipe", "cut"):
+        sys.exit("[compose] transition must be 'wipe' or 'cut'")
+    transition_sec = float(plan.get("transition_sec", 0.3))
+    if transition == "wipe" and transition_sec <= 0:
+        sys.exit("[compose] transition_sec must be greater than 0")
     style = plan.get("broll_style", "")
     keep = [[float(a), float(b)] for a, b in plan["keep"]]
     remap = _Remap(keep)
@@ -472,9 +568,11 @@ def compose(plan_path: Path) -> Path:
     cut = _cut(rec, keep, work / "cut.mkv")
 
     beats = plan["beats"]
-    clips, full_frame = [], set()  # full_frame: beat ids shown presenter-only (labels move off the face)
+    clips, clip_beats, clip_frame_counts = [], [], []
+    full_frame = set()  # beat ids shown presenter-only (labels move off the face)
     provider = config.env("BROLL_PROVIDER", "elevenlabs" if config.env("ELEVENLABS_API_KEY") else "none").lower()
     missing_bg: list[int] = []  # explain beats that asked for a background the provider could not deliver
+    background_index = 0
     for b in beats:
         s, e = remap(float(b["start"])), remap(float(b["end"]), end=True)
         if e - s < 0.3:
@@ -486,19 +584,23 @@ def compose(plan_path: Path) -> Path:
         pres = _presenter_segment(cut, s, e, work / f"pres_{b['id']}.mp4", float(b.get("zoom", 1.0)), plan.get("grade", ""), nf)
         print(f"[compose] beat {b['id']} ({kind}, {e - s:.1f}s)")
         if kind in ("hook", "cta") or layout == "full":
-            clips.append(pres); full_frame.add(b["id"])
+            clips.append(pres); clip_beats.append(b); clip_frame_counts.append(nf); full_frame.add(b["id"])
             continue
-        bg = _broll(b, e - s + 0.5, work / f"bg_{b['id']}.mp4", style)
+        motion = BACKGROUND_MOTIONS[background_index % len(BACKGROUND_MOTIONS)]
+        if (b.get("broll_prompt") or "").strip():
+            background_index += 1
+        bg = _broll(b, e - s + 0.5, work / f"bg_{b['id']}.mp4", style, motion)
         if bg is None:
             if (b.get("broll_prompt") or "").strip() and provider != "none":
                 missing_bg.append(b["id"])
                 print(f"[compose]   beat {b['id']}: background FAILED ({provider}) - presenter full-frame", file=sys.stderr)
             else:
                 print(f"[compose]   beat {b['id']}: no background requested - presenter full-frame")
-            clips.append(pres); full_frame.add(b["id"])
+            clips.append(pres); clip_beats.append(b); clip_frame_counts.append(nf); full_frame.add(b["id"])
             continue
         clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s,
                              float(plan.get("face_y", 0.42)), nf))
+        clip_beats.append(b); clip_frame_counts.append(nf)
 
     if missing_bg and not plan.get("allow_presenter_fallback"):
         sys.exit(f"[compose] FAILED: no background for explain beat(s) {missing_bg} (BROLL_PROVIDER={provider}). "
@@ -507,6 +609,25 @@ def compose(plan_path: Path) -> Path:
                  "only the missing ones are fetched. Set plan.allow_presenter_fallback=true only for a deliberate choice.")
 
     ai_beats = sum(1 for b in beats if b["id"] not in full_frame and (work / f"beat_{b['id']}.mp4") in clips)
+    for i, clip in enumerate(clips):
+        beat = clip_beats[i]
+        beat_id = beat["id"]
+        background = beat_id not in full_frame
+        wipe_in = (transition == "wipe" and i > 0 and
+                   (background or clip_beats[i - 1]["id"] not in full_frame))
+        wipe_out = (transition == "wipe" and i + 1 < len(clips) and
+                    (background or clip_beats[i + 1]["id"] not in full_frame))
+        before = _frame_count(clip)
+        if before != clip_frame_counts[i]:
+            sys.exit(f"[compose] beat {beat_id}: expected {clip_frame_counts[i]} frames, found {before} before wipe")
+        if wipe_in or wipe_out:
+            clip = _wipe(clip, work / f"beat_{beat_id}_wipe.mp4", accent, wipe_in, wipe_out,
+                         transition_sec, before)
+            clips[i] = clip
+        after = _frame_count(clip)
+        print(f"[compose] beat {beat_id} frames: before={before} after={after}")
+        if after != before:
+            sys.exit(f"[compose] beat {beat_id}: wipe changed frame count ({before} -> {after})")
     lst = work / "concat.txt"
     lst.write_text("".join(f"file '{c.resolve().as_posix()}'\n" for c in clips), encoding="utf-8")
     joined = work / "joined.mp4"
@@ -525,6 +646,7 @@ def compose(plan_path: Path) -> Path:
         f"Style: CapHi,{font},86,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H70000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,440,1",
         f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,280,1",
         f"Style: Label,{font},64,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,8,90,90,1040,1",
+        f"Style: LabelCircle,{font},64,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,7,60,540,300,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     title = plan.get("title_te")
@@ -536,10 +658,11 @@ def compose(plan_path: Path) -> Path:
     for b in beats:
         lab = (b.get("label_te") or "").strip()
         if lab and b.get("kind", "explain") not in ("hook", "cta"):
-            # presenter full-frame: label in the top band (below the ~250 px UI band), not on the face;
-            # circle-top: label hangs under the ring instead of sitting on the background's subject
-            mv = 300 if b["id"] in full_frame else (CIRCLE_LABEL_Y if (b.get("layout") or layout) == "circle-top" else 0)
-            ass.append(f"Dialogue: 1,{_ass_time(remap(float(b['start'])))},{_ass_time(remap(float(b['end']), end=True))},Label,,0,0,{mv},,{_esc(lab)}")
+            # Full-frame labels use the top band; circle-top labels sit left of the ring.
+            circle_label = b["id"] not in full_frame and (b.get("layout") or layout) == "circle-top"
+            style_name = "LabelCircle" if circle_label else "Label"
+            mv = 0 if circle_label else (300 if b["id"] in full_frame else 0)
+            ass.append(f"Dialogue: 1,{_ass_time(remap(float(b['start'])))},{_ass_time(remap(float(b['end']), end=True))},{style_name},,0,0,{mv},,{_esc(lab)}")
         for c in b.get("captions", []):
             cs, ce = remap(float(c["start"])), remap(float(c["end"]), end=True)
             if ce - cs < 0.15:

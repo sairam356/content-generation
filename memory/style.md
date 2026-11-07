@@ -10,6 +10,7 @@
   `circle-top` (presenter in a round frame at the top-right, background subject left visible); split (visual on the top half, owner reacting on the bottom half, caption under his face - second approved style, pick per video from the reference) chosen per video.
 - Accent colour: #ffd54a. Captions: big, white, 2-4 words, bottom third. Top label: 2-4 Telugu words per beat.
 - Backgrounds: photoreal, relevant to the exact sentence, slow camera move, no text, no faces.
+- Default edit look: 0.3 s diagonal yellow-accent wipes at beat changes and alternating push-in, pan-right, pull-out, pan-left background motion.
 
 ## Owner notes
 - (added by /ref and by the owner)

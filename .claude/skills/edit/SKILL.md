@@ -32,6 +32,7 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
 4. Beats: hook / explain… / cta with start-end in recording seconds; captions 2-4 words, ≥ 0.4 s, never
    overlapping, from the script text. `label_te` and `broll_prompt` from the script (adapt the prompt if he said
    something different). Layout from args → `memory/style.md` default. Hook and CTA are presenter full-frame.
+   Default to 0.3 s diagonal accent wipes and cycle background motion `push-in` → `pan-right` → `pull-out` → `pan-left`; use `plan.transition: "cut"` or a beat's `motion` override when needed.
 5. Music: if the script's `music_mood` is not `none` and `assets/music/music.json` exists, pick the track a human
    would (mood match, no vocals, not used in the last 3 videos per `memory/done.md`); set `music` + `music_volume`
    (0.06-0.10). No catalog → no music (never download random music).
