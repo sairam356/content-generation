@@ -60,8 +60,22 @@ if kind == "edit":
     text("READY: ready/demo.mp4 (46.4 s). Thumbnail layout: topic. Owner notes: listen to the CTA.")
 elif kind == "scout":
     tool("Bash", {"command": f"python -m pipeline watch {prompt.split()[1]}"}, ".state/refs/abc/analysis.json", secs=2)
-    tool("Agent", {"subagent_type": "taste", "model": "fable", "description": "taste r1"}, "VERDICT: yes-with-changes - premium enough", secs=1.5)
-    tool("Agent", {"subagent_type": "reach", "model": "fable", "description": "reach r1"}, "VERDICT: yes - hook travels", secs=1.5)
+    # real Claude Code launches these in the background: the tool_result is only "launched", the verdict comes
+    # later as a <task-notification> user message
+    launched = []
+    for a, verdict in (("taste", "VERDICT: yes-with-changes - premium enough"), ("reach", "VERDICT: yes - hook travels")):
+        tid, aid = "toolu_" + uuid.uuid4().hex[:12], uuid.uuid4().hex[:17]
+        ev({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": tid, "name": "Agent",
+            "input": {"subagent_type": a, "model": "fable", "description": f"{a} r1 scout", "prompt": "..."}}]}})
+        ev({"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": tid, "content": [{"type": "text",
+            "text": f"Async agent launched successfully. (internal metadata)\nagentId: {aid}\nThe agent is working in the background."}]}]}})
+        launched.append((tid, aid, a, verdict))
+    text("While the agents run, I'm reading the policy file myself.")
+    time.sleep(SP * 2)
+    for tid, aid, a, verdict in launched:
+        ev({"type": "user", "message": {"role": "user", "content": f"<task-notification>\n<task-id>{aid}</task-id>\n<tool-use-id>{tid}</tool-use-id>"
+            f"\n<status>completed</status>\n<summary>Agent \"{a} r1 scout\" finished</summary>\n<result>{verdict}\n\nDetails...</result>\n</task-notification>"}})
+        time.sleep(SP)
     text("WHAT: a 40 s facts Short about pressure cookers.\nWHY VIRAL: a number in the hook.\nDO WE MAKE IT? yes-with-changes: our angle = the 1679 Papin story.\nCOMPLIANCE: no flags.\nNext: /script pressure cooker whistle 120°")
 elif kind == "topics":
     tool("Bash", {"command": "python -m pipeline channels"}, ".state/channels.json", secs=2)

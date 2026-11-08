@@ -70,6 +70,7 @@ class Job:
         self.round = 1
         self.agents: dict[str, dict] = {}  # "taste r1" -> {...}
         self.tools: dict[str, dict] = {}   # tool_use_id -> {name, agent, started}
+        self.async_agents: dict[str, str] = {}  # tool_use_id of a background Agent -> agent key
         self.log: deque[str] = deque(maxlen=4000)
         self.events: list[dict] = []
         self.result_text = ""
@@ -146,6 +147,9 @@ class Job:
             if not isinstance(c, dict):
                 continue
             ct = c.get("type")
+            if ct == "text" and t == "user" and "<task-notification>" in c.get("text", ""):
+                self.on_task_notification(c["text"])
+                continue
             if ct == "text" and t == "assistant" and c.get("text", "").strip():
                 self.last_text = c["text"].strip()
                 for ln in c["text"].strip().splitlines()[:12]:
@@ -190,6 +194,24 @@ class Job:
                 break
         self.logline(f"[{name}] {text[:300]}")
 
+    def on_task_notification(self, text: str) -> None:
+        def tag(name: str) -> str:
+            m = re.search(rf"<{name}>(.*?)</{name}>", text, re.S)
+            return (m.group(1) if m else "").strip()
+        tid, status, result = tag("tool-use-id"), tag("status"), tag("result") or tag("summary")
+        key = self.async_agents.pop(tid, None)
+        a = self.agents.get(key or "")
+        if not a:
+            self.logline(f"[agent] background task {status}: {tag('summary')[:120]}")
+            return
+        ok = status in ("completed", "success", "done")
+        a["status"] = "done" if ok else "failed"
+        a["ended"] = _now()
+        a["verdict"] = _verdict(result)
+        a["report"] = result[:6000]
+        self.logline(f"[agent] {key} {'done' if ok else 'FAILED (' + status + ')'} in {a['ended'] - a['started']:.0f}s: {a['verdict']}")
+        self.emit({"type": "agent", "key": key, "data": a})
+
     def on_tool_result(self, c: dict) -> None:
         tid = c.get("tool_use_id", "")
         meta = self.tools.pop(tid, None)
@@ -200,6 +222,11 @@ class Job:
         err = bool(c.get("is_error"))
         if meta and meta.get("agent"):
             a = self.agents.get(meta["agent"])
+            if a and not err and "Async agent launched" in body:
+                # background Agent: the real verdict arrives later as a <task-notification> user message
+                self.async_agents[tid] = meta["agent"]
+                self.logline(f"[agent] {meta['agent']} running in background")
+                return
             if a:
                 a["status"] = "failed" if err else "done"
                 a["ended"] = _now()
