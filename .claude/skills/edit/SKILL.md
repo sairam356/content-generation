@@ -32,7 +32,11 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
 4. Beats: hook / explain… / cta with start-end in recording seconds; captions 2-4 words, ≥ 0.4 s, never
    overlapping, from the script text. `label_te` and `broll_prompt` from the script (adapt the prompt if he said
    something different). Layout from args → `memory/style.md` default. Hook and CTA are presenter full-frame.
-   Default to 0.3 s diagonal accent wipes and cycle background motion `push-in` → `pan-right` → `pull-out` → `pan-left`; use `plan.transition: "cut"` or a beat's `motion` override when needed.
+   Transitions (owner decision 2026-11-08): `transition: "sections"` (default) - the 0.3 s diagonal accent wipe only
+   where the video changes direction (hook→explain, explain→cta, a new `label_te` = next topic section, or a beat
+   marked `"wipe": true`); every
+   other beat is a hard cut and its label pill pops in. Cycle background motion `push-in` → `pan-right` → `pull-out`
+   → `pan-left`; use a beat's `motion` override when needed. `"wipe"` (every change) only if the reference demands it.
 5. Music: if the script's `music_mood` is not `none` and `assets/music/music.json` exists, pick the track a human
    would (mood match, no vocals, not used in the last 3 videos per `memory/done.md`); set `music` + `music_volume`
    (0.06-0.10). No catalog → no music (never download random music).
@@ -72,11 +76,13 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
 9. Canva thumbnail (owner rule: every video). After the final verify, read `memory/canva.md` first and follow its
    thumbnail workflow (Canva connector `mcp__claude_ai_Canva__*` + Claude in Chrome, never Playwright; designs private):
    - Keep the FFmpeg ones as `ready/<name>_ffmpeg.jpg` / `_wide_ffmpeg.jpg` (copy, don't delete).
-   - Inputs: the most expressive face frame (check frames around `thumbnail_sec`), background-removed with
-     `remove-background`; the sharpest, most on-topic `build/bg_<id>.png`; `thumbnail_text_te` (≤ 5 words, the
-     hook number/word as the biggest element). Look: the shortlist black-and-yellow facts style (accent from plan).
+   - Owner rule (2026-11-08): the TOPIC is the hero, not his face. A frozen face frame looks odd. Layout: the
+     sharpest, most on-topic `build/bg_<id>.png` filling the frame + the hook number/word as the biggest element +
+     `thumbnail_text_te` (≤ 5 words). His face only as a small disc in a corner (≤ 22 % of the width, natural
+     expression, background-removed with `remove-background`) - drop it if no frame looks natural. Look: the
+     shortlist black-and-yellow facts style (accent from plan).
    - Blank design at exact size (`https://www.canva.com/design?create=true&width=1080&height=1920&units=px`), then
-     lay out again for 1280x720 (don't use `resize-design`). Face disc large; keep the bottom 20 % and right edge clear.
+     lay out again for 1280x720 (don't use `resize-design`). Keep the bottom 20 % and right edge clear.
    - Export PNG, convert to JPG over `ready/<name>.jpg` (1080x1920) and `ready/<name>_wide.jpg` (1280x720).
    - Put both Canva edit links in `ready/<name>.md`. Append only new Canva findings to `memory/canva.md`.
    - If Canva fails (not connected, export error), restore the FFmpeg thumbnails, say so in the reply and finish -

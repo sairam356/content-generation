@@ -554,9 +554,9 @@ def compose(plan_path: Path) -> Path:
     if layout not in LAYOUTS:
         sys.exit(f"[compose] layout must be one of {LAYOUTS}")
     accent = plan.get("accent", "#ffd54a")
-    transition = plan.get("transition", "wipe")
-    if transition not in ("wipe", "cut"):
-        sys.exit("[compose] transition must be 'wipe' or 'cut'")
+    transition = plan.get("transition", "sections")
+    if transition not in ("sections", "wipe", "cut"):
+        sys.exit(f"[compose] unknown transition {transition!r} (sections|wipe|cut)")
     transition_sec = float(plan.get("transition_sec", 0.3))
     if transition == "wipe" and transition_sec <= 0:
         sys.exit("[compose] transition_sec must be greater than 0")
@@ -609,15 +609,24 @@ def compose(plan_path: Path) -> Path:
                  "only the missing ones are fetched. Set plan.allow_presenter_fallback=true only for a deliberate choice.")
 
     ai_beats = sum(1 for b in beats if b["id"] not in full_frame and (work / f"beat_{b['id']}.mp4") in clips)
+    def _wipe_between(a: dict, b: dict) -> bool:
+        """sections (default): wipe only where the video changes direction - a new beat kind
+        (hook->explain, explain->cta), a new label_te (next topic section) or a beat marked "wipe": true. Everything else is a hard cut
+        and the label pill pop-in carries the energy. wipe: every change to/from a background. cut: never."""
+        if transition == "cut":
+            return False
+        if transition == "wipe":
+            return a["id"] not in full_frame or b["id"] not in full_frame
+        la, lb = (a.get("label_te") or "").strip(), (b.get("label_te") or "").strip()
+        return (a.get("kind", "explain") != b.get("kind", "explain") or bool(b.get("wipe"))
+                or (lb != "" and lb != la))
+
     wipes: dict = {}  # beat id -> (wipe_in, wipe_out); labels stay off the wipe frames
     for i, clip in enumerate(clips):
         beat = clip_beats[i]
         beat_id = beat["id"]
-        background = beat_id not in full_frame
-        wipe_in = (transition == "wipe" and i > 0 and
-                   (background or clip_beats[i - 1]["id"] not in full_frame))
-        wipe_out = (transition == "wipe" and i + 1 < len(clips) and
-                    (background or clip_beats[i + 1]["id"] not in full_frame))
+        wipe_in = i > 0 and _wipe_between(clip_beats[i - 1], beat)
+        wipe_out = i + 1 < len(clips) and _wipe_between(beat, clip_beats[i + 1])
         wipes[beat_id] = (wipe_in, wipe_out)
         before = _frame_count(clip)
         if before != clip_frame_counts[i]:
@@ -669,7 +678,8 @@ def compose(plan_path: Path) -> Path:
             pad = int(transition_sec * FPS / 2 + 0.5) / FPS
             ls, le = ls + (pad if w_in else 0), le - (pad if w_out else 0)
             if le - ls > 0.2:
-                ass.append(f"Dialogue: 1,{_ass_time(ls)},{_ass_time(le)},{style_name},,0,0,{mv},,{_esc(lab)}")
+                pop = r"{\fscx40\fscy40\alpha&H60&\t(0,180,\fscx100\fscy100\alpha&H00&)}"
+                ass.append(f"Dialogue: 1,{_ass_time(ls)},{_ass_time(le)},{style_name},,0,0,{mv},,{pop}{_esc(lab)}")
         for c in b.get("captions", []):
             cs, ce = remap(float(c["start"])), remap(float(c["end"]), end=True)
             if ce - cs < 0.15:

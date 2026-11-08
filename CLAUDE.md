@@ -52,7 +52,7 @@ All exit non-zero with a reason on failure and print the output path on success.
 ```json
 {"recording":"inbox/20261106-take1/take1.mp4","name":"why-idli-is-soft","layout":"corner|circle-top|split|full","face_y":0.42,
  "accent":"#ffd54a","broll_style":"clean photoreal, warm light, slow push-in",
- "transition":"wipe","transition_sec":0.3,
+ "transition":"sections","transition_sec":0.3,
  "title_te":"...","description_te":"...","hashtags":["#Shorts"],
  "music":"assets/music/curious-01.mp3","music_volume":0.08,
  "keep":[[0.8,14.2],[15.1,52.0]],
@@ -62,7 +62,7 @@ All exit non-zero with a reason on failure and print the output path on success.
  "sfx":[{"at":4.0,"file":"assets/sfx/whoosh-soft.mp3","gain":0.4}],
  "thumbnail_sec":1.2,"thumbnail_text_te":"ఇడ్లీ ఎందుకు మెత్తగా?"}
 ```
-`transition` defaults to the 0.3 s diagonal accent wipe (`cut` keeps hard cuts); `transition_sec` sets its duration, and beat `motion` can be `push-in`, `pan-right`, `pull-out`, or `pan-left`.
+`transition` defaults to `sections`: the 0.3 s diagonal accent wipe only where the beat `kind` changes (hook→explain, explain→cta), the `label_te` changes (next topic section) or a beat has `"wipe": true`; every other change is a hard cut with the label pill popping in. `wipe` = at every change to/from a background, `cut` = never. `transition_sec` sets the wipe duration; beat `motion` can be `push-in`, `pan-right`, `pull-out`, or `pan-left`.
 `face_y` = where his face centre sits in the recording (0 top … 1 bottom; read it off the contact sheet) - every layout crops
 the presenter around it. Styles: `circle-top` = background is the hero, he is a small circle top-right; `split` = visual top
 half, he reacts in the bottom half, caption under his face (pick per video from the reference's format).

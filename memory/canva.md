@@ -40,6 +40,11 @@ workaround, good template) to the right section with the date. Update an entry i
 - 2026-11-08 Static design editing: `insert_shape` / `insert_fill` always go on top, so add a backdrop rect and then `layer_element: back`
   (the page background color can't be set). The default font renders bold Telugu correctly. `resize-design` 9:16 → 16:9 only scales the layout into the
   middle of a white page, so lay the wide version out again by hand (about 3 calls). `export-design` PNG with an exact width and height, then curl to disk.
+- 2026-11-08 **Thumbnail variants:** run `copy-design` on a finished static thumbnail, then insert the new elements. `layer_element: front` on the bar and its text puts them
+  back on top, so the new disc and face tuck under the bar. Two variants took about 6 min with 1 browser action.
+- 2026-11-08 `position_element` on a **rotated** element lands off target. For a 990x312 text at -3°, the stored `top` came out 25.7 px below the requested value.
+  After a move, read the returned `top` and correct by the difference. Big text with lineHeight 1 (260 px in a 312 px box) renders its glyphs low:
+  to centre them in a 280 px bar, the stored text `top` is about bar top - 11.
 
 ## Editor behaviour (tested 2026-11-07)
 - Page transitions overlap neighbouring pages, so the design gets shorter (13 × 0.3 s wipes: 46.1 s → 42.1 s) and the voice is

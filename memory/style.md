@@ -10,8 +10,8 @@
   `circle-top` (presenter in a round frame at the top-right, background subject left visible); split (visual on the top half, owner reacting on the bottom half, caption under his face - second approved style, pick per video from the reference) chosen per video.
 - Accent colour: #ffd54a. Captions: big, white, 2-4 words, bottom third. Top label: 2-4 Telugu words per beat.
 - Backgrounds: photoreal, relevant to the exact sentence, slow camera move, no text, no faces.
-- Default edit look: 0.3 s diagonal yellow-accent wipes at beat changes and alternating push-in, pan-right, pull-out, pan-left background motion.
+- Default edit look: 0.3 s diagonal yellow-accent wipe only at section changes (hook→explain, the twist, →cta); hard cuts with pop-in label pills between; alternating push-in, pan-right, pull-out, pan-left background motion. (Owner decision 2026-11-08.)
 
 ## Owner notes
 - (added by /ref and by the owner)
-- 2026-11-08 Owner: FFmpeg is the video editor; Canva makes the thumbnail (9:16 + 16:9) for every video (`/edit` step 9), FFmpeg thumbnail is the fallback.
+- 2026-11-08 Owner: FFmpeg is the video editor; Canva makes the thumbnail (9:16 + 16:9) for every video (`/edit` step 9), FFmpeg thumbnail is the fallback. Thumbnail = topic visual + hook number as hero; his face only small in a corner (a frozen face frame looks odd).
