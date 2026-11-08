@@ -76,8 +76,9 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
 9. Canva thumbnail (owner rule: every video). After the final verify, read `memory/canva.md` first and follow its
    thumbnail workflow (Canva connector `mcp__claude_ai_Canva__*` + Claude in Chrome, never Playwright; designs private):
    - Keep the FFmpeg ones as `ready/<name>_ffmpeg.jpg` / `_wide_ffmpeg.jpg` (copy, don't delete).
-   - Owner rule (2026-11-08): pick ONE of two layouts per video, by content and taste (decide it in the plan as
-     `thumbnail_layout: "face" | "topic"`, say why in the reply):
+   - Owner rule (2026-11-08): pick ONE of two layouts per video. The two parameters are CONTENT (how strong his
+     reaction is in the recording, what the hook is about) and TASTE (what the Telugu facts audience clicks; ask the
+     `taste` agent when unsure). Decide it in the plan as `thumbnail_layout: "face" | "topic"` and say why in the reply:
      * `face` - only when his reaction in the recording is strong enough to carry the click on its own (a real
        viral-grade expression: shock, laugh, disbelief). His face big (FFmpeg style), `thumbnail_text_te` on top,
        hook number in accent - rebuilt in Canva for the clean text, not the raw FFmpeg frame.
