@@ -62,7 +62,9 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
    If compose exits with `FAILED: no background for explain beat(s) [...]`, that is the gate working: an explain
    beat with the presenter full-frame is not the agreed look. Fix the cause (network, provider limit, prompt) and
    re-run compose (finished backgrounds stay cached). Never set `allow_presenter_fallback` just to get a file out.
-8. Review loop (mandatory, max 3 rounds):
+8. Review loop (mandatory, max 2 rounds - owner rule 2026-11-08 after a 3-round run took 60+ min). Round 1 = full
+   panel. Round 2 = only the [editor] actions that fail a gate (not taste nits); regenerate at most 2 backgrounds
+   per round (the free image tier is 1 image / 46 s). Anything left after round 2 goes in the reply as a note.
    a. `python -m pipeline review ready/<name>.mp4`; view `review/contact.jpg`.
    b. Panel (Agent, parallel): `designer`, `taste`, `end-viewer`, `compliance`, `reach`, `comparison`; then `reviewer`.
    c. Checklist: hook < 0.3 s & full-frame & title readable · every cut clean (no clipped words, no mid-sentence
