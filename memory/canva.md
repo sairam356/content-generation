@@ -29,6 +29,17 @@ workaround, good template) to the right section with the date. Update an entry i
     Workaround: in the editor, set the video's corner rounding to half its width.
   - `format_text` styles a whole text element; you can't highlight one word inside it.
 - Export: MP4 `vertical_1080p`, pro quality. Animations and page transitions are included in the MP4.
+- 2026-11-08 **Local file → Canva without the browser:** call `create-upload-url`, then run `curl -X POST -H "Content-Type: application/octet-stream" --data-binary @file <url>`.
+  It returns `{"mediaId":"MA..."}`. Each URL works for one upload only.
+- 2026-11-08 `remove-background` on an uploaded frame returns a clean transparent cut-out in about 10 s. Crop tight (head + neck) first:
+  a phone frame has a straight shirt edge, so hide it under a bar or the page edge.
+- 2026-11-08 **Video templates are opaque to the connector:** a copied Shorts/video template reads as page `type: unsupported`, with no element IDs.
+  `insert_fill` lands on top with no locator, and `resize-design` flattens every timed element onto one page. For static work (thumbnails), copy the template's
+  *look* on a blank design instead. Make a blank design at an exact size in Chrome:
+  `https://www.canva.com/design?create=true&width=1080&height=1920&units=px` (the new design ID is in the redirected URL). Its page is `fixed` and fully editable.
+- 2026-11-08 Static design editing: `insert_shape` / `insert_fill` always go on top, so add a backdrop rect and then `layer_element: back`
+  (the page background color can't be set). The default font renders bold Telugu correctly. `resize-design` 9:16 → 16:9 only scales the layout into the
+  middle of a white page, so lay the wide version out again by hand (about 3 calls). `export-design` PNG with an exact width and height, then curl to disk.
 
 ## Editor behaviour (tested 2026-11-07)
 - Page transitions overlap neighbouring pages, so the design gets shorter (13 × 0.3 s wipes: 46.1 s → 42.1 s) and the voice is
@@ -49,6 +60,10 @@ workaround, good template) to the right section with the date. Update an entry i
   in Canva took about 36 min and about 150 fragile clicks, with no word-timed captions and no SFX. The owner chose the **FFmpeg
   compose** as the editor; it takes the Canva touches (diagonal accent wipe, alternating zoom/pan, label pill next to the
   circle). Use Canva for thumbnails, title/end cards and template inspiration.
+- 2026-11-08 Thumbnail test (pressure-cooker, `DAHaUherVyY` 9:16 + `DAHaUluuTw4` 16:9, report `.state/canva_thumb_report.md`). About 8.5 min,
+  almost all through the connector. Recipe: dark topic still full-bleed, a tilted yellow pill (black Telugu, 120 px bold), the face cut-out on a yellow disc,
+  and a black bar with a yellow border holding the hook number (225 px). Verdict: it beats the FFmpeg face-only thumbnail on topic clarity and contrast.
+  Weak spots: a soft, non-Indian AI cooker and a smaller face. Use a sharp, India-specific still and a bigger face disc next time.
 
 ## Templates (shortlist — fill from canva.com in his Chrome; link, why it fits, which transitions/animations)
 Scouted 2026-11-07: 22 previews opened (21 Free + 1 Pro) from 11 searches. Screenshots (filmstrips of the preview) are in
