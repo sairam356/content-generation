@@ -67,6 +67,10 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
    per round (the free image tier is 1 image / 46 s). Anything left after round 2 goes in the reply as a note.
    a. `python -m pipeline review ready/<name>.mp4`; view `review/contact.jpg`.
    b. Panel (Agent, parallel): `designer`, `taste`, `end-viewer`, `compliance`, `reach`, `comparison`; then `reviewer`.
+      EVERY round, including round 1 and the final one: all 6 specialists, then the reviewer merges them. Never judge
+      the video yourself instead of the panel, never skip the reviewer, never sign off a render the panel has not seen
+      (audit of the 2026-11-08 run: round 1 had no agents, round 2 had no reviewer, round 3 had the reviewer only).
+      Name each Agent call `<agent> r<round>` (e.g. `taste r1`) so the run log shows the rounds.
    c. Checklist: hook < 0.3 s & full-frame & title readable · every cut clean (no clipped words, no mid-sentence
       jump, no black/frozen frames) · captions correct + in sync (spot-check 3) + never over the face · each
       background relevant to the sentence, no text/watermark, presenter not hiding the subject · visual change
