@@ -14,3 +14,4 @@
 
 ## Owner notes
 - (added by /ref and by the owner)
+- 2026-11-08 Owner: FFmpeg is the video editor; Canva makes the thumbnail (9:16 + 16:9) for every video (`/edit` step 9), FFmpeg thumbnail is the fallback.

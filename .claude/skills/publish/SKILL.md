@@ -14,5 +14,6 @@ Read `.claude/skills/_shared/preamble.md` first. Argument: `ready/<name>.mp4` (o
 ## Steps
 1. Read `ready/<name>.md`, the plan/script it came from, `policy/youtube.md`.
 2. Agents in parallel: `compliance` (final), `reach` (title/description/time), then `reviewer`.
-3. Thumbnail: review `ready/<name>.jpg` + `_wide.jpg`; if weak, rebuild in Canva via Chrome (his Pro templates) and save over them.
+3. Thumbnail: `ready/<name>.jpg` + `_wide.jpg` are the Canva thumbnails from `/edit` step 9 (FFmpeg fallback in `_ffmpeg.jpg`).
+   If they are missing or still the FFmpeg ones, build them in Canva the same way (`memory/canva.md`), then review.
 4. Write the pack. If BLOCKED, say exactly what to change and which skill fixes it.

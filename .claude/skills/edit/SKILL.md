@@ -44,9 +44,9 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
    `face_y` = his face centre as a fraction of the recording height (contact sheet; phone selfies are usually 0.35-0.45) -
    layouts crop around it. Layout per video: `circle-top` when the background subject must stay the hero,
    `split` when the reference format is "visual top / reaction bottom"; never cover his face with a caption.
-   Canva (optional, via Chrome tools `mcp__claude-in-chrome__*`, his Pro account at canva.com): when a title card,
-   end card or thumbnail would look better from a template, build it there (9:16, export PNG) into
-   `<folder>/canva/` and reference it from the plan as `title_card` / `end_card` / use it as the thumbnail.
+   Canva (optional, via Chrome tools `mcp__claude-in-chrome__*`, his Pro account at canva.com): when a title card
+   or end card would look better from a template, build it there (9:16, export PNG) into `<folder>/canva/` and
+   reference it from the plan as `title_card` / `end_card`. The thumbnail is always made in Canva (step 9).
 7. Write `<folder>/plan.json` (schema in CLAUDE.md) and run `python -m pipeline compose <folder>/plan.json`.
    Compose renders to a temp file, runs `verify` (atoms, faststart, codecs, full decode) and only then moves it
    atomically into `ready/` - so `ready/<name>.mp4` is never half-written. If compose says "failed verification",
@@ -69,4 +69,16 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
    d. Anything failing → fix plan.json (or delete `build/bg_<id>*` to regenerate a background) → compose → review.
       Each compose replaces `ready/<name>.mp4` atomically after verification; `review` re-checks `verify` too
       (`checks.playable_everywhere`). Finish with `python -m pipeline verify ready/<name>.mp4` and quote its result.
-9. Append to `memory/done.md`: date | name | topic | layout | duration | music | panel verdict. Reply.
+9. Canva thumbnail (owner rule: every video). After the final verify, read `memory/canva.md` first and follow its
+   thumbnail workflow (Canva connector `mcp__claude_ai_Canva__*` + Claude in Chrome, never Playwright; designs private):
+   - Keep the FFmpeg ones as `ready/<name>_ffmpeg.jpg` / `_wide_ffmpeg.jpg` (copy, don't delete).
+   - Inputs: the most expressive face frame (check frames around `thumbnail_sec`), background-removed with
+     `remove-background`; the sharpest, most on-topic `build/bg_<id>.png`; `thumbnail_text_te` (≤ 5 words, the
+     hook number/word as the biggest element). Look: the shortlist black-and-yellow facts style (accent from plan).
+   - Blank design at exact size (`https://www.canva.com/design?create=true&width=1080&height=1920&units=px`), then
+     lay out again for 1280x720 (don't use `resize-design`). Face disc large; keep the bottom 20 % and right edge clear.
+   - Export PNG, convert to JPG over `ready/<name>.jpg` (1080x1920) and `ready/<name>_wide.jpg` (1280x720).
+   - Put both Canva edit links in `ready/<name>.md`. Append only new Canva findings to `memory/canva.md`.
+   - If Canva fails (not connected, export error), restore the FFmpeg thumbnails, say so in the reply and finish -
+     the video is never blocked on the thumbnail.
+10. Append to `memory/done.md`: date | name | topic | layout | duration | music | panel verdict. Reply.

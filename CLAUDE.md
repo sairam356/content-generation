@@ -74,6 +74,7 @@ Both are used through his logged-in Chrome with the "Claude in Chrome" extension
 `/music` builds `assets/music/music.json` + `assets/sfx/sfx.json` from the YouTube Audio Library; `/edit` and
 `/publish` may build title/end cards and thumbnails from Canva templates at canva.com (export PNG 9:16).
 compose output: `ready/<name>.mp4`, `.jpg` (1080x1920 thumbnail with title text), `_wide.jpg` (1280x720), `.md`.
+`/edit` then replaces `.jpg` / `_wide.jpg` with Canva thumbnails (owner rule, every video); the FFmpeg ones stay as `_ffmpeg.jpg` fallbacks.
 
 ## Rules that never bend
 Original scripts, verified facts with sources, policy/youtube.md on every video, AI backgrounds declared,
