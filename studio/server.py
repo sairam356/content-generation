@@ -126,7 +126,8 @@ class Job:
     def handle(self, d: dict) -> None:
         t = d.get("type")
         if t == "system":
-            self.logline(f"[claude] session {d.get('session_id', '')[:8]} model={d.get('model', '')}")
+            if d.get("subtype") == "init":
+                self.logline(f"[claude] session {d.get('session_id', '')[:8]} model={d.get('model', '')}")
             return
         if t == "result":
             res = (d.get("result") or "").strip()
