@@ -73,6 +73,7 @@ class Job:
         self.log: deque[str] = deque(maxlen=4000)
         self.events: list[dict] = []
         self.result_text = ""
+        self.last_text = ""
         self.error = ""
         self.outputs: dict = {}
         self.subscribers: set[asyncio.Queue] = set()
@@ -128,7 +129,8 @@ class Job:
             self.logline(f"[claude] session {d.get('session_id', '')[:8]} model={d.get('model', '')}")
             return
         if t == "result":
-            self.result_text = (d.get("result") or "")[:20000]
+            res = (d.get("result") or "").strip()
+            self.result_text = (res if len(res) > 60 else (self.last_text or res))[:20000]
             if d.get("is_error") or d.get("subtype") not in (None, "success"):
                 self.error = self.error or f"claude ended with {d.get('subtype')}"
             self.logline(f"[claude] result: {d.get('subtype')} turns={d.get('num_turns')} cost=${d.get('total_cost_usd', 0):.2f}")
@@ -144,6 +146,7 @@ class Job:
                 continue
             ct = c.get("type")
             if ct == "text" and t == "assistant" and c.get("text", "").strip():
+                self.last_text = c["text"].strip()
                 for ln in c["text"].strip().splitlines()[:12]:
                     self.logline("  " + ln)
             elif ct == "tool_use":
