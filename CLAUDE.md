@@ -60,7 +60,7 @@ All exit non-zero with a reason on failure and print the output path on success.
           {"id":2,"kind":"explain","start":4.0,"end":15.0,"label_te":"ఫర్మెంటేషన్","motion":"pan-right",
            "broll_prompt":"idli batter bubbling in a steel vessel, warm kitchen light, slow push-in","captions":[]}],
  "sfx":[{"at":4.0,"file":"assets/sfx/whoosh-soft.mp3","gain":0.4}],
- "thumbnail_sec":1.2,"thumbnail_text_te":"ఇడ్లీ ఎందుకు మెత్తగా?"}
+ "thumbnail_sec":1.2,"thumbnail_text_te":"ఇడ్లీ ఎందుకు మెత్తగా?","thumbnail_layout":"topic"}
 ```
 `transition` defaults to `sections`: the 0.3 s diagonal accent wipe only where the beat `kind` changes (hook→explain, explain→cta), the `label_te` changes (next topic section) or a beat has `"wipe": true`; every other change is a hard cut with the label pill popping in. `wipe` = at every change to/from a background, `cut` = never. `transition_sec` sets the wipe duration; beat `motion` can be `push-in`, `pan-right`, `pull-out`, or `pan-left`.
 `face_y` = where his face centre sits in the recording (0 top … 1 bottom; read it off the contact sheet) - every layout crops
@@ -74,6 +74,8 @@ Both are used through his logged-in Chrome with the "Claude in Chrome" extension
 `/music` builds `assets/music/music.json` + `assets/sfx/sfx.json` from the YouTube Audio Library; `/edit` and
 `/publish` may build title/end cards and thumbnails from Canva templates at canva.com (export PNG 9:16).
 compose output: `ready/<name>.mp4`, `.jpg` (1080x1920 thumbnail with title text), `_wide.jpg` (1280x720), `.md`.
+`thumbnail_layout`: `topic` (default: topic visual + hook number + his small smiling disc) or `face` (his face big) only when his
+reaction is viral-grade on its own; Canva builds either, FFmpeg's `_ffmpeg.jpg` is the fallback.
 `/edit` then replaces `.jpg` / `_wide.jpg` with Canva thumbnails (owner rule, every video); the FFmpeg ones stay as `_ffmpeg.jpg` fallbacks.
 
 ## Rules that never bend

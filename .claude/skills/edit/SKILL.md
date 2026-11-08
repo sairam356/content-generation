@@ -76,11 +76,16 @@ Use `--no-script` only for explicit smoke tests or a genuinely unscripted record
 9. Canva thumbnail (owner rule: every video). After the final verify, read `memory/canva.md` first and follow its
    thumbnail workflow (Canva connector `mcp__claude_ai_Canva__*` + Claude in Chrome, never Playwright; designs private):
    - Keep the FFmpeg ones as `ready/<name>_ffmpeg.jpg` / `_wide_ffmpeg.jpg` (copy, don't delete).
-   - Owner rule (2026-11-08): the TOPIC is the hero, not his face. A frozen face frame looks odd. Layout: the
-     sharpest, most on-topic `build/bg_<id>.png` filling the frame + the hook number/word as the biggest element +
-     `thumbnail_text_te` (≤ 5 words). His face only as a small disc in a corner (≤ 22 % of the width, natural
-     expression, background-removed with `remove-background`) - drop it if no frame looks natural. Look: the
-     shortlist black-and-yellow facts style (accent from plan).
+   - Owner rule (2026-11-08): pick ONE of two layouts per video, by content and taste (decide it in the plan as
+     `thumbnail_layout: "face" | "topic"`, say why in the reply):
+     * `face` - only when his reaction in the recording is strong enough to carry the click on its own (a real
+       viral-grade expression: shock, laugh, disbelief). His face big (FFmpeg style), `thumbnail_text_te` on top,
+       hook number in accent - rebuilt in Canva for the clean text, not the raw FFmpeg frame.
+     * `topic` (the default) - the sharpest, most on-topic `build/bg_<id>.png` filling the frame + the hook
+       number/word as the biggest element + `thumbnail_text_te` (≤ 5 words) + his face as a small disc
+       (≤ 22 % of the width, natural smile, background-removed with `remove-background`), tucked above the number
+       bar. Drop the disc only if no frame looks natural. A frozen mid-word face frame is never used.
+     Look for both: the shortlist black-and-yellow facts style (accent from plan).
    - Blank design at exact size (`https://www.canva.com/design?create=true&width=1080&height=1920&units=px`), then
      lay out again for 1280x720 (don't use `resize-design`). Keep the bottom 20 % and right edge clear.
    - Export PNG, convert to JPG over `ready/<name>.jpg` (1080x1920) and `ready/<name>_wide.jpg` (1280x720).

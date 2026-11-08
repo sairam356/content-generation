@@ -14,4 +14,4 @@
 
 ## Owner notes
 - (added by /ref and by the owner)
-- 2026-11-08 Owner: FFmpeg is the video editor; Canva makes the thumbnail (9:16 + 16:9) for every video (`/edit` step 9), FFmpeg thumbnail is the fallback. Thumbnail = topic visual + hook number as hero; his face only small in a corner (a frozen face frame looks odd).
+- 2026-11-08 Owner: FFmpeg is the video editor; Canva makes the thumbnail (9:16 + 16:9) for every video (`/edit` step 9), FFmpeg thumbnail is the fallback. Thumbnail = Claude picks per video: `face` (his face big) only when his reaction is viral-grade on its own; otherwise `topic` (topic visual + hook number as hero + his small natural-smile disc = Canva variant B). A frozen mid-word face frame is never used.
