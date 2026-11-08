@@ -293,7 +293,9 @@ def _cut(src: Path, keep: list[list[float]], out: Path) -> Path:
     parts = []
     for i, (s, e) in enumerate(keep):
         parts.append(f"[0:v]trim=start={s:.3f}:end={e:.3f},setpts=PTS-STARTPTS[v{i}];"
-                     f"[0:a]atrim=start={s:.3f}:end={e:.3f},asetpts=PTS-STARTPTS[a{i}]")
+                     # 8 ms fade at both edges of every kept piece: no click at the joins, length unchanged
+                     f"[0:a]atrim=start={s:.3f}:end={e:.3f},asetpts=PTS-STARTPTS,"
+                     f"afade=t=in:d=0.008,afade=t=out:st={max(0.0, e - s - 0.008):.3f}:d=0.008[a{i}]")
     streams = "".join(f"[v{i}][a{i}]" for i in range(len(keep)))
     fc = ";".join(parts) + f";{streams}concat=n={len(keep)}:v=1:a=1[v][a]"
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
@@ -404,10 +406,14 @@ def _broll(beat: dict, seconds: float, out: Path, style: str, motion: str = "pus
 
 
 def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: float = 1.0, grade: str = "",
-                       frames: int | None = None) -> Path:
+                       frames: int | None = None, face_x: float = 0.5) -> Path:
     """Presenter full-frame. zoom > 1 = editor's punch-in (crop anchored near the top so the head is not clipped).
-    grade = optional ffmpeg filter (e.g. "eq=gamma=1.12") from plan.json to lift an under-exposed face."""
-    vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}"
+    grade = optional ffmpeg filter (e.g. "eq=gamma=1.12") from plan.json to lift an under-exposed face.
+    face_x = face centre across the recording width (plan.face_x, default 0.5): a landscape recording is cropped to
+    9:16 around it so an off-centre face is not clipped (portrait recordings fill the width, so it has no effect)."""
+    face_x = min(max(float(face_x), 0.0), 1.0)
+    vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,"
+          f"crop={W}:{H}:'clip(iw*{face_x}-ow/2,0,iw-ow)':(ih-oh)/2")
     if zoom > 1.0:
         vf += f",scale={round(W * zoom / 2) * 2}:{round(H * zoom / 2) * 2},crop={W}:{H}:(iw-{W})/2:(ih-{H})*0.08"
     if grade:
@@ -420,8 +426,25 @@ def _presenter_segment(cut: Path, start: float, end: float, out: Path, zoom: flo
     return out
 
 
+def _presenter_square(cut: Path, start: float, end: float, out: Path, face_x: float, face_y: float, frac: float,
+                      grade: str = "", frames: int | None = None) -> Path:
+    """Square crop around the face straight from the recording, for the circle layout on LANDSCAPE takes: the 9:16
+    presenter crop of a landscape frame is too narrow for head + shoulders, the original frame is not.
+    frac = square side as a fraction of the recording height (plan.circle_frac, default 0.9)."""
+    side = f"min(iw,ih)*{min(max(float(frac), 0.3), 1.0)}"
+    vf = (f"crop='{side}':'{side}':'clip(iw*{face_x}-ow/2,0,iw-ow)':'clip(ih*{face_y}-oh/2,0,ih-oh)',"
+          f"scale=940:940:flags=lanczos")
+    if grade:
+        vf += f",{grade}"
+    exact = ["-frames:v", str(frames)] if frames else []
+    _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.3f}", "-to", f"{end:.3f}", "-i", str(cut), "-an",
+          "-vf", f"{vf},fps={FPS}" + (",tpad=stop_mode=clone:stop=3" if frames else "") + ",format=yuv420p",
+          *exact, "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", str(out)])
+    return out
+
+
 def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: float, face_y: float = 0.42,
-            frames: int | None = None) -> Path:
+            frames: int | None = None, pres_square: bool = False, circle_y: int = 150) -> Path:
     """Composite presenter over/beside the background according to the layout template.
 
     face_y = where the owner's face centre sits in HIS recording (0 = top, 1 = bottom; plan.face_y, default 0.42):
@@ -441,9 +464,11 @@ def _layout(bg: Path, pres: Path, layout: str, out: Path, accent: str, seconds: 
         cs = d + pad
         cc = cs / 2
         x_right = 48   # margin from the right edge
-        y = 150
+        y = int(circle_y)  # plan.circle_y: top of the circle; keep it below the Shorts top bar (~250 px)
+        # pres_square: pres is already a face-centred square (landscape takes, see _presenter_square)
+        pcrop = "" if pres_square else f"crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:'clip(ih*{face_y}-oh/2,0,ih-oh)',"
         fc = (f"[0:v]eq=saturation=1.06[bgd];"  # background is the hero: keep it bright and sharp, no dimming/vignette
-              f"[1:v]crop='min(iw,ih*0.62)':'min(iw,ih*0.62)':(iw-ow)/2:'clip(ih*{face_y}-oh/2,0,ih-oh)',scale={d}:{d},format=rgba,"
+              f"[1:v]{pcrop}scale={d}:{d}:flags=lanczos,format=rgba,"
               f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(({c}-hypot(X-{c},Y-{c}))*64,0,255)'[p];"
               f"color=c=black:s={cs}x{cs},format=rgba,"
               f"geq=r='0':g='0':b='0':a='clip(({c + 24}-hypot(X-{cc},Y-{cc}))*7,0,150)'[shadow];"
@@ -568,6 +593,9 @@ def compose(plan_path: Path) -> Path:
     cut = _cut(rec, keep, work / "cut.mkv")
 
     beats = plan["beats"]
+    _dims = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                            "-of", "csv=p=0", str(cut)], capture_output=True, text=True).stdout.strip().split(",")
+    landscape = len(_dims) == 2 and _dims[0].isdigit() and _dims[1].isdigit() and int(_dims[0]) > int(_dims[1])
     clips, clip_beats, clip_frame_counts = [], [], []
     full_frame = set()  # beat ids shown presenter-only (labels move off the face)
     provider = config.env("BROLL_PROVIDER", "elevenlabs" if config.env("ELEVENLABS_API_KEY") else "none").lower()
@@ -581,7 +609,8 @@ def compose(plan_path: Path) -> Path:
         s, e = round(s * FPS) / FPS, round(e * FPS) / FPS
         nf = round((e - s) * FPS)
         kind = b.get("kind", "explain")
-        pres = _presenter_segment(cut, s, e, work / f"pres_{b['id']}.mp4", float(b.get("zoom", 1.0)), plan.get("grade", ""), nf)
+        pres = _presenter_segment(cut, s, e, work / f"pres_{b['id']}.mp4", float(b.get("zoom", 1.0)), plan.get("grade", ""), nf,
+                                  float(plan.get("face_x", 0.5)))
         print(f"[compose] beat {b['id']} ({kind}, {e - s:.1f}s)")
         if kind in ("hook", "cta") or layout == "full":
             clips.append(pres); clip_beats.append(b); clip_frame_counts.append(nf); full_frame.add(b["id"])
@@ -598,8 +627,15 @@ def compose(plan_path: Path) -> Path:
                 print(f"[compose]   beat {b['id']}: no background requested - presenter full-frame")
             clips.append(pres); clip_beats.append(b); clip_frame_counts.append(nf); full_frame.add(b["id"])
             continue
-        clips.append(_layout(bg, pres, b.get("layout") or layout, work / f"beat_{b['id']}.mp4", accent, e - s,
-                             float(plan.get("face_y", 0.42)), nf))
+        beat_layout = b.get("layout") or layout
+        square = beat_layout == "circle-top" and landscape
+        if square:
+            pres = _presenter_square(cut, s, e, work / f"pres_sq_{b['id']}.mp4", float(plan.get("face_x", 0.5)),
+                                     float(plan.get("face_y", 0.42)), float(plan.get("circle_frac", 0.9)),
+                                     plan.get("grade", ""), nf)
+        clips.append(_layout(bg, pres, beat_layout, work / f"beat_{b['id']}.mp4", accent, e - s,
+                             float(plan.get("face_y", 0.42)), nf, pres_square=square,
+                             circle_y=int(plan.get("circle_y", 150))))
         clip_beats.append(b); clip_frame_counts.append(nf)
 
     if missing_bg and not plan.get("allow_presenter_fallback"):
@@ -647,6 +683,8 @@ def compose(plan_path: Path) -> Path:
 
     # captions + title card + beat labels as one ASS file
     font = config.env("SUBTITLE_FONT", "Nirmala UI")
+    cap_full = int(plan.get("caption_margin_full", 440))  # bottom margin of full-frame captions (Shorts UI ends ~420)
+    title_top = int(plan.get("title_top", 280))  # top margin of the hook title card
     ass = [
         "[Script Info]", "ScriptType: v4.00+", f"PlayResX: {W}", f"PlayResY: {H}", "WrapStyle: 0", "",
         "[V4+ Styles]",
@@ -655,7 +693,10 @@ def compose(plan_path: Path) -> Path:
         # soft drop shadow (BackColour) so white captions survive white steam / bright backgrounds
         f"Style: Cap,{font},86,&H00FFFFFF,&H00FFFFFF,&H00000000,&H70000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,440,1",
         f"Style: CapHi,{font},86,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H70000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,440,1",
-        f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,280,1",
+        # CapF / CapHiF = captions on presenter full-frame beats; plan.caption_margin_full lowers them off a tight chin
+        f"Style: CapF,{font},86,&H00FFFFFF,&H00FFFFFF,&H00000000,&H70000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,{cap_full},1",
+        f"Style: CapHiF,{font},86,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00FFFFFF,&H00000000,&H70000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,{cap_full},1",
+        f"Style: Title,{font},78,&H00FFFFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,14,0,8,70,70,{title_top},1",
         f"Style: Label,{font},64,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,8,90,90,1040,1",
         f"Style: LabelCircle,{font},64,&H00000000,&H00FFFFFF,&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},&H00{accent[5:7]}{accent[3:5]}{accent[1:3]},-1,0,0,0,100,100,0,0,3,16,0,7,60,540,300,1",
         "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -668,11 +709,14 @@ def compose(plan_path: Path) -> Path:
             ass.append(f"Dialogue: 2,{_ass_time(h0)},{_ass_time(min(h1, h0 + card))},Title,,0,0,0,,{_esc(title)}")
     for b in beats:
         lab = (b.get("label_te") or "").strip()
-        if lab and b.get("kind", "explain") not in ("hook", "cta"):
+        # label_show: false hides the pill on one beat (e.g. a presenter close-up) without changing the section logic
+        if lab and b.get("kind", "explain") not in ("hook", "cta") and b.get("label_show", True):
             # Full-frame labels use the top band; circle-top labels sit left of the ring.
             circle_label = b["id"] not in full_frame and (b.get("layout") or layout) == "circle-top"
             style_name = "LabelCircle" if circle_label else "Label"
-            mv = 0 if circle_label else (300 if b["id"] in full_frame else 0)
+            # label_top_full: top margin of the label on presenter full-frame beats (lower it for tight close-ups,
+            # e.g. landscape takes, so the pill sits on the hair and not on the forehead)
+            mv = 0 if circle_label else (int(plan.get("label_top_full", 300)) if b["id"] in full_frame else 0)
             ls, le = remap(float(b["start"])), remap(float(b["end"]), end=True)
             w_in, w_out = wipes.get(b["id"], (False, False))
             pad = int(transition_sec * FPS / 2 + 0.5) / FPS
@@ -684,7 +728,7 @@ def compose(plan_path: Path) -> Path:
             cs, ce = remap(float(c["start"])), remap(float(c["end"]), end=True)
             if ce - cs < 0.15:
                 continue
-            style_name = "CapHi" if c.get("hi") else "Cap"  # "hi": true = accent-colour caption for the key number/word
+            style_name = ("CapHi" if c.get("hi") else "Cap") + ("F" if b["id"] in full_frame else "")  # "hi": true = accent-colour caption for the key number/word
             ass.append(f"Dialogue: 0,{_ass_time(cs)},{_ass_time(ce - 0.03)},{style_name},,0,0,0,,{_esc(c['text'])}")
     ass_path = work / "captions.ass"
     ass_path.write_text("\n".join(ass), encoding="utf-8")

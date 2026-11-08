@@ -46,6 +46,14 @@ workaround, good template) to the right section with the date. Update an entry i
   After a move, read the returned `top` and correct by the difference. Big text with lineHeight 1 (260 px in a 312 px box) renders its glyphs low:
   to centre them in a 280 px bar, the stored text `top` is about bar top - 11.
 
+- 2026-11-08 **Per-video thumbnail = copy + 2 fill swaps (~4 min, zero browser actions):** `copy-design` the last topic+disc thumbnail
+  (9:16 `DAHaVBQdDO8`, 16:9 `DAHaVAe-evg` are the current masters), `update_fill` the full-bleed still and the face rect, commit, export.
+  `update_fill` keeps the old rect size but rescales the new image's `imageBox` to cover it, and when the aspect differs a lot it zooms in
+  (the wide face showed only the eyes). Fix: `crop_media` with top 0, left 0 and the rect's own width and height (rect aspect = image aspect).
+- 2026-11-08 The 16:9 topic layout that works: dark left half (pill at top 45, small disc 210 px at 50/200, "120°!" bar at top 360 layered front so the
+  cut-out's shirt edge hides under it), and the cooker still as a 680x1209 rect at left 600, top -244 (the page clips it). Rotated pill/bar elements
+  land ~15 px lower than requested (see the rotation note above).
+
 ## Editor behaviour (tested 2026-11-07)
 - Page transitions overlap neighbouring pages, so the design gets shorter (13 × 0.3 s wipes: 46.1 s → 42.1 s) and the voice is
   clipped at each cut. Fix: pad each clip with a freeze frame plus silence as long as the transition, then use Replace (keeps rounding and position).

@@ -64,7 +64,9 @@ All exit non-zero with a reason on failure and print the output path on success.
 ```
 `transition` defaults to `sections`: the 0.3 s diagonal accent wipe only where the beat `kind` changes (hook→explain, explain→cta), the `label_te` changes (next topic section) or a beat has `"wipe": true`; every other change is a hard cut with the label pill popping in. `wipe` = at every change to/from a background, `cut` = never. `transition_sec` sets the wipe duration; beat `motion` can be `push-in`, `pan-right`, `pull-out`, or `pan-left`.
 `face_y` = where his face centre sits in the recording (0 top … 1 bottom; read it off the contact sheet) - every layout crops
-the presenter around it. Styles: `circle-top` = background is the hero, he is a small circle top-right; `split` = visual top
+the presenter around it. `face_x` (default 0.5) = the same across the width, for landscape takes; on landscape takes the circle is cut
+as a square from the original frame (`circle_frac`, default 0.9). Safe-zone keys: `circle_y` (circle top, default 150; 260 clears the
+Shorts top bar), per-beat `label_show: false`, `caption_margin_full` (full-frame captions, default 440), `title_top`, `title_card_sec` (0 = none). Styles: `circle-top` = background is the hero, he is a small circle top-right; `split` = visual top
 half, he reacts in the bottom half, caption under his face (pick per video from the reference's format).
 Times are recording seconds (compose remaps after cutting). Hook/CTA = presenter full-frame. Explain beats get a
 generated background (Veo via ElevenLabs when `ELEVENLABS_API_KEY` is set; `BROLL_PROVIDER=none` → presenter only).
