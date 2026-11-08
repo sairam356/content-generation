@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Telugu Shorts Studio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#0f1115;--card:#171a21;--line:#262b36;--text:#e8eaf0;--mut:#8b93a7;--y:#ffd54a;--g:#4ade80;--r:#f87171;--b:#60a5fa}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;gap:18px;padding:12px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+header h1{font-size:17px;margin:0;color:var(--y)}nav{display:flex;gap:4px}
+nav button{background:none;border:1px solid transparent;color:var(--mut);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:14px}
+nav button.on{color:var(--text);border-color:var(--line);background:var(--card)}
+#live{margin-left:auto;font-size:13px;color:var(--mut)}#live b{color:var(--y)}
+main{padding:20px;max-width:1400px;margin:0 auto}section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:14px;flex-wrap:wrap}.col{flex:1;min-width:280px}
+input[type=text],textarea,select{width:100%;background:#0c0e12;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit}
+textarea{min-height:90px;resize:vertical}
+button.pri{background:var(--y);color:#111;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer}
+button.sec{background:#222736;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}.mut{color:var(--mut)}.small{font-size:13px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--mut)}
+.pill.done,.pill.success{border-color:var(--g);color:var(--g)}.pill.running{border-color:var(--y);color:var(--y)}
+.pill.failed{border-color:var(--r);color:var(--r)}
+.stages{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+.stage{padding:8px 12px;border-radius:8px;border:1px solid var(--line);font-size:13px;color:var(--mut);min-width:96px;text-align:center}
+.stage.running{border-color:var(--y);color:var(--y);animation:pulse 1.4s infinite}.stage.done{border-color:var(--g);color:var(--g)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.agent{border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;background:#12151b}
+.agent b{display:block;text-transform:capitalize}.agent .v{color:var(--mut);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agent.running{border-color:var(--y)}.agent.done{border-color:var(--g)}.agent.failed{border-color:var(--r)}
+.agent.running b::after{content:" ●";color:var(--y);animation:pulse 1s infinite}
+.agent.done b::after{content:" ✓";color:var(--g)}.agent.failed b::after{content:" ✗";color:var(--r)}
+pre.log{background:#0a0c10;border:1px solid var(--line);border-radius:10px;padding:12px;height:300px;overflow:auto;font:12.5px/1.5 ui-monospace,Consolas,monospace;color:#c3c9d6;white-space:pre-wrap;word-break:break-word}
+.big{font-size:26px;font-weight:700;padding:14px 18px;border-radius:12px;margin:10px 0}
+.big.success{background:#102a1a;color:var(--g)}.big.failed{background:#2a1212;color:var(--r)}.big.running{background:#2a2410;color:var(--y)}
+table{width:100%;border-collapse:collapse}td,th{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:14px}
+tr.sel td{background:#1f2535}tr.click{cursor:pointer}tr.click:hover td{background:#1b2030}
+iframe{width:100%;height:70vh;border:1px solid var(--line);border-radius:10px;background:#000}
+video{width:100%;max-height:78vh;background:#000;border-radius:10px}
+.thumbs img{height:220px;border-radius:8px;border:1px solid var(--line);margin-right:10px}
+.md{white-space:pre-wrap;font-size:13.5px;max-height:60vh;overflow:auto}
+.hist div{padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}.hist div:hover{color:var(--y)}
+h2{font-size:18px;margin:0 0 10px}h3{font-size:15px;margin:14px 0 6px;color:var(--mut)}
+.verdict{white-space:pre-wrap;font-size:14px;background:#0c0e12;border-radius:8px;padding:12px;border:1px solid var(--line)}
+</style></head><body>
+<header><h1>Telugu Shorts Studio</h1>
+<nav><button data-s="scout" class="on">1 Scout</button><button data-s="topics">2 Topics</button><button data-s="record">3 Record</button><button data-s="run">4 Run</button><button data-s="ready">5 Ready</button></nav>
+<div id="live">idle</div></header>
+<main>
+
+<section id="scout" class="on">
+<div class="card"><h2>Paste YouTube Shorts links</h2>
+<p class="mut small">Each link runs <code>/scout</code>: what it is, why it went viral, do we make it, our angle, compliance flags. Links are queued one after another.</p>
+<textarea id="links" placeholder="https://youtube.com/shorts/...&#10;https://youtube.com/shorts/..."></textarea>
+<div class="row" style="margin-top:10px;align-items:center"><button class="pri" id="btnScout">Scout these links</button>
+<span class="mut small" id="scoutQ"></span></div></div>
+<div id="scoutCards"></div>
+<div class="card"><h2>Make topics</h2><p class="mut small">Runs <code>/topics</code> (10 ideas with scripts + teleprompters, scouted links as focus). Takes a while; follow it on the Run tab.</p>
+<div class="row"><input type="text" id="topicsFocus" placeholder="focus words (optional), e.g. kitchen science, 1600s India"><button class="pri" id="btnTopics">Make topics</button></div></div>
+</section>
+
+<section id="topics">
+<div class="row"><div class="col" style="max-width:520px"><div class="card"><h2>Topics <span class="mut small" id="topicsCount"></span></h2><div id="topicList"></div></div></div>
+<div class="col"><div class="card" id="tpCard"><h2 id="tpTitle">Pick a topic</h2>
+<div class="row" style="margin-bottom:10px"><button class="sec" id="tpTele">Teleprompter</button><button class="sec" id="tpScript">Script</button><button class="sec" id="tpAudio">Play Telugu preview</button><button class="pri" id="tpSelect">I'll record this</button></div>
+<audio id="tpPlayer" controls style="width:100%;display:none"></audio>
+<iframe id="tpFrame" style="display:none"></iframe><div class="md" id="tpMd"></div></div></div></div>
+</section>
+
+<section id="record">
+<div class="card"><h2>Upload your recording</h2>
+<p>Selected script: <b id="selScript" class="mut">none (the edit will use the newest approved script)</b></p>
+<div class="row"><div class="col"><label class="small mut">Recording (mp4/mov from phone or WhatsApp; record in portrait)</label><input type="file" id="recFile" accept="video/*" style="margin-top:6px"></div>
+<div class="col" style="max-width:260px"><label class="small mut">Layout</label><select id="recLayout"><option value="">default (memory/style.md)</option><option>circle-top</option><option>corner</option><option>split</option><option>full</option></select></div></div>
+<div style="margin-top:14px"><button class="pri" id="btnUpload">Upload and start /edit</button> <span class="mut small" id="upStatus"></span></div>
+<p class="mut small" style="margin-top:12px">The file is copied into <code>inbox\</code> and <code>/edit</code> starts in Claude Code, the same as the watcher. One job at a time; a run takes about 30 minutes.</p></div>
+</section>
+
+<section id="run">
+<div class="row"><div class="col" style="max-width:300px"><div class="card"><h2>Runs</h2><div class="hist" id="hist"></div></div></div>
+<div class="col"><div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2 id="runTitle">No run selected</h2><span class="mut small" id="runTime"></span></div>
+<div class="big running" id="runBig" style="display:none"></div>
+<h3>Stages</h3><div class="stages" id="stages"></div>
+<h3>Specialist panel <span id="roundLbl" class="mut"></span></h3><div class="agents" id="agents"></div>
+<h3>Claude's report</h3><div class="verdict" id="runResult" style="display:none"></div>
+<h3>Live log</h3><pre class="log" id="log"></pre></div></div></div>
+</section>
+
+<section id="ready">
+<div class="row"><div class="col" style="max-width:360px"><div class="card"><h2>Ready videos</h2><div id="readyList"></div></div></div>
+<div class="col"><div class="card" id="readyCard"><h2 id="rdTitle">Pick a video</h2>
+<div class="row"><div class="col" style="max-width:420px"><video id="rdVideo" controls playsinline style="display:none"></video><div class="thumbs" id="rdThumbs"></div></div>
+<div class="col"><div id="rdVerify"></div><div class="md" id="rdMd"></div></div></div></div></div></div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s), api=(p,o)=>fetch(p,o).then(async r=>{if(!r.ok)throw new Error((await r.json().catch(()=>({detail:r.statusText}))).detail);return r.json()});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtT=s=>{s=Math.round(s);return s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s'};
+let state={jobs:[],cur:null,es:null,selScript:localStorage.selScript||'',topics:[],ready:[],scoutQueue:[]};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.s));
+function show(s){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));document.querySelectorAll('section').forEach(x=>x.classList.toggle('on',x.id===s));
+ if(s==='topics')loadTopics();if(s==='ready')loadReady();if(s==='run')loadJobs();}
+if(state.selScript)$('#selScript').textContent=state.selScript;
+
+/* ---- scout ---- */
+$('#btnScout').onclick=async()=>{const links=$('#links').value.split(/\s+/).filter(l=>/^https?:\/\//.test(l));if(!links.length)return alert('paste at least one link');
+ state.scoutQueue=links;$('#links').value='';nextScout();show('run');};
+async function nextScout(){if(!state.scoutQueue.length){$('#scoutQ').textContent='';return}
+ if(state.jobs.some(j=>j.status==='running')){$('#scoutQ').textContent=state.scoutQueue.length+' link(s) waiting for the current run';return}
+ const url=state.scoutQueue.shift();$('#scoutQ').textContent=state.scoutQueue.length+' more queued';
+ try{const j=await api('/api/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'scout',args:url,label:'scout '+url.slice(-20)})});await loadJobs();openJob(j.id);}catch(e){alert(e.message)}}
+function renderScoutCards(){const cards=state.jobs.filter(j=>j.kind==='scout'&&j.status!=='running').slice(0,10);
+ $('#scoutCards').innerHTML=cards.map(j=>`<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(j.prompt.replace('/scout ',''))}</b><span class="pill ${j.status}">${j.status}</span></div><div class="verdict" style="margin-top:8px">${esc(j.result_text||j.error||'(no verdict text)')}</div></div>`).join('')||'<p class="mut small">No scout verdicts yet.</p>';}
+$('#btnTopics').onclick=async()=>{const focus=$('#topicsFocus').value.trim();const scouted=state.jobs.filter(j=>j.kind==='scout'&&j.status==='success').map(j=>j.prompt.replace('/scout ','')).slice(0,5);
+ const args=['10',focus,scouted.length?'inspired by '+scouted.join(' '):''].filter(Boolean).join(' ');
+ try{const j=await api('/api/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'topics',args,label:'topics'})});await loadJobs();openJob(j.id);show('run')}catch(e){alert(e.message)}};
+
+/* ---- topics ---- */
+async function loadTopics(){state.topics=await api('/api/topics');let n=0;
+ $('#topicList').innerHTML=state.topics.map(d=>`<h3>${d.date}${d.readme?` <a class="small" href="/files/${d.readme}" target="_blank">board</a>`:''}</h3><table>${d.ideas.map(i=>{n++;return `<tr class="click ${state.selScript===i.folder+'/script.json'?'sel':''}" data-f="${i.folder}"><td><b>${esc(i.title)}</b><div class="mut small">${esc(i.hook)}</div></td><td class="small mut" style="white-space:nowrap">${i.approved?'<span class="pill done">approved</span>':'<span class="pill">draft</span>'}${i.audio?' 🔊':''}${i.seconds?'<br>'+i.seconds+'s':''}</td></tr>`}).join('')}</table>`).join('')||'<p class="mut">No topics yet. Make them from the Scout tab.</p>';
+ $('#topicsCount').textContent=n?n+' scripts':'';
+ document.querySelectorAll('#topicList tr.click').forEach(tr=>tr.onclick=()=>openTopic(tr.dataset.f));}
+let curTopic=null;
+function openTopic(folder){curTopic=folder;const idea=state.topics.flatMap(d=>d.ideas).find(i=>i.folder===folder);$('#tpTitle').textContent=idea?idea.title:folder;
+ $('#tpPlayer').src='/files/'+folder+'/teleprompter.mp3';$('#tpPlayer').style.display=idea&&idea.audio?'':'none';$('#tpAudio').disabled=!(idea&&idea.audio);showTele();}
+function showTele(){$('#tpFrame').style.display='';$('#tpMd').textContent='';$('#tpFrame').src='/files/'+curTopic+'/teleprompter.html';}
+$('#tpTele').onclick=()=>curTopic&&showTele();
+$('#tpScript').onclick=async()=>{if(!curTopic)return;$('#tpFrame').style.display='none';$('#tpMd').textContent=await fetch('/files/'+curTopic+'/script.md').then(r=>r.ok?r.text():'(no script.md)');};
+$('#tpAudio').onclick=()=>{const p=$('#tpPlayer');p.paused?p.play():p.pause()};
+$('#tpSelect').onclick=()=>{if(!curTopic)return;state.selScript=curTopic+'/script.json';localStorage.selScript=state.selScript;$('#selScript').textContent=state.selScript;loadTopics();show('record')};
+
+/* ---- record ---- */
+$('#btnUpload').onclick=async()=>{const f=$('#recFile').files[0];if(!f)return alert('choose a recording');
+ const fd=new FormData();fd.append('file',f);fd.append('script',state.selScript);fd.append('layout',$('#recLayout').value);
+ $('#btnUpload').disabled=true;$('#upStatus').textContent='uploading '+(f.size/1e6).toFixed(1)+' MB ...';
+ try{const j=await api('/api/upload',{method:'POST',body:fd});$('#upStatus').textContent='started';await loadJobs();openJob(j.id);show('run')}catch(e){$('#upStatus').textContent='';alert(e.message)}finally{$('#btnUpload').disabled=false}};
+
+/* ---- run ---- */
+async function loadJobs(){state.jobs=await api('/api/jobs');renderHist();renderScoutCards();const r=state.jobs.find(j=>j.status==='running');
+ $('#live').innerHTML=r?`<b>running:</b> ${esc(r.label)} · ${esc(r.stage||'starting')}`:'idle';if(r&&!state.cur)openJob(r.id);else if(!state.cur&&state.jobs.length)openJob(state.jobs[0].id);if(!r&&state.scoutQueue.length)nextScout();}
+function renderHist(){$('#hist').innerHTML=state.jobs.map(j=>`<div data-id="${j.id}"><span class="pill ${j.status}">${j.status}</span> ${esc(j.label)}<br><span class="mut">${new Date(j.started*1000).toLocaleString()}</span></div>`).join('')||'<p class="mut small">No runs yet.</p>';
+ document.querySelectorAll('#hist div').forEach(d=>d.onclick=()=>openJob(d.dataset.id));}
+function openJob(id){if(state.es){state.es.close();state.es=null}state.cur=id;$('#log').textContent='';
+ const es=new EventSource('/api/jobs/'+id+'/events');state.es=es;
+ es.onmessage=e=>{const ev=JSON.parse(e.data);
+  if(ev.type==='job'){renderJob(ev.job);$('#log').textContent=(ev.job.log||[]).join('\n');$('#log').scrollTop=1e9}
+  else if(ev.type==='log'){$('#log').textContent+=ev.line+'\n';if($('#log').scrollHeight-$('#log').scrollTop<700)$('#log').scrollTop=1e9}
+  else if(ev.type==='stage'){renderStages(ev.stages);const j=jobById(id);if(j){j.stage=ev.stage;j.stages=ev.stages;if(j.status==='running')$('#runBig').textContent='RUNNING - '+ev.stage}}
+  else if(ev.type==='agent'){const j=jobById(id);if(j){j.agents[ev.key]=ev.data;renderAgents(j.agents)}}
+  else if(ev.type==='done'){renderJob(ev.job);es.close();state.es=null;loadJobs();if(ev.job.kind==='edit')loadReady();if(ev.job.kind==='topics')loadTopics();}};
+ es.onerror=()=>{};}
+function jobById(id){return state.jobs.find(j=>j.id===id)}
+function renderJob(j){const i=state.jobs.findIndex(x=>x.id===j.id);if(i>=0)state.jobs[i]={...state.jobs[i],...j};else state.jobs.unshift(j);
+ $('#runTitle').textContent=j.label;$('#runTime').textContent=(j.status==='running'?'running ':'')+fmtT((j.ended||Date.now()/1000)-j.started)+(j.status!=='running'?' · '+new Date(j.started*1000).toLocaleString():'');
+ const big=$('#runBig');big.style.display='';big.className='big '+j.status;
+ big.textContent=j.status==='running'?'RUNNING - '+(j.stage||'starting'):j.status==='success'?'SUCCESS'+(j.outputs.video?' - ready\\'+j.outputs.video+(j.outputs.verified?' (verified)':''):''):'FAILED - '+(j.error||'see log');
+ renderStages(j.stages);renderAgents(j.agents);const rr=$('#runResult');rr.style.display=j.result_text?'':'none';rr.textContent=j.result_text||'';}
+function renderStages(st){$('#stages').innerHTML=Object.entries(st||{}).map(([k,v])=>`<div class="stage ${v}">${k}</div>`).join('');}
+function renderAgents(ag){const list=Object.entries(ag||{}).sort((a,b)=>a[1].started-b[1].started);const rounds=[...new Set(list.map(x=>x[1].round))];
+ $('#roundLbl').textContent=rounds.length?'· rounds: '+rounds.join(', '):'· not dispatched yet';
+ $('#agents').innerHTML=list.map(([k,a])=>`<div class="agent ${a.status}" title="${esc(a.report||'')}"><b>${esc(a.agent)} <span class="mut">r${a.round}</span></b><div class="v">${a.status==='running'?'working...':esc(a.verdict||a.status)}</div><div class="mut">${a.model||''}${a.ended?' · '+fmtT(a.ended-a.started):''}</div></div>`).join('')||'<p class="mut small">The 6 specialists + reviewer appear here as Claude dispatches them.</p>';}
+
+/* ---- ready ---- */
+async function loadReady(){state.ready=await api('/api/ready');$('#readyList').innerHTML=state.ready.map(v=>`<div class="hist"><div data-n="${esc(v.name)}"><b>${esc(v.name)}</b> ${v.verify?`<span class="pill ${v.verify.ok===false?'failed':'done'}">${v.verify.ok===false?'verify failed':'verified'}</span>`:''}<br><span class="mut small">${new Date(v.mtime*1000).toLocaleString()} · ${(v.size/1e6).toFixed(1)} MB</span></div></div>`).join('')||'<p class="mut">Nothing in ready\\ yet.</p>';
+ document.querySelectorAll('#readyList [data-n]').forEach(d=>d.onclick=()=>openReady(d.dataset.n));if(state.ready[0]&&!$('#rdVideo').src)openReady(state.ready[0].name);}
+function openReady(n){const v=state.ready.find(x=>x.name===n);if(!v)return;$('#rdTitle').textContent=v.name;const vid=$('#rdVideo');vid.style.display='';vid.src='/files/'+v.video;
+ $('#rdThumbs').innerHTML=[v.thumb,v.thumb_wide].filter(Boolean).map(t=>`<a href="/files/${t}" target="_blank"><img src="/files/${t}?${v.mtime}"></a>`).join('')+`<div style="margin-top:8px"><a class="sec" style="text-decoration:none;padding:6px 12px;border-radius:8px;border:1px solid var(--line)" href="/files/${v.video}" download>Download video</a></div>`;
+ $('#rdVerify').innerHTML=v.verify?`<div class="pill ${v.verify.ok===false?'failed':'done'}">verify: ${v.verify.ok===false?'FAILED':'OK'}</div> <span class="mut small">${esc(JSON.stringify(v.verify).slice(0,300))}</span>`:'<span class="mut small">no verify.json</span>';
+ $('#rdMd').textContent=v.md||'(no .md yet)';}
+
+loadJobs();setInterval(loadJobs,20000);
+setInterval(()=>{const j=jobById(state.cur);if(j&&j.status==='running')$('#runTime').textContent='running '+fmtT(Date.now()/1000-j.started)},1000);
+</script></body></html>

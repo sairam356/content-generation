@@ -21,6 +21,11 @@ Read `.claude/skills/_shared/preamble.md` at the start of every skill. Read `ETH
 | `/analytics [csv]` | Studio analytics → diagnosis per video → rules in memory (weekly) |
 | `/retro` | learnings → `memory/learnings.md` |
 
+## Studio UI
+`studio.ps1` → http://localhost:8787 (`studio/server.py` FastAPI + `studio/index.html`). It runs the same skills with
+`claude -p ... --output-format stream-json` and shows stages, every Agent dispatch (name the call `<agent> r<round>`),
+tool errors and the result live. Jobs: `.state/studio/jobs/`. It reads only topics/, inbox/, ready/.
+
 ## Models
 Generation (`/topics`, `/script`, `/edit`, `/publish`) runs on Opus (claude-opus-5-5) at high effort (`.claude/settings.json`).
 Specialist agents (planning/review) run on Fable (`model: fable` = claude-fable-5-1). If an Agent call fails because Fable is

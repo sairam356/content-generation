@@ -41,6 +41,16 @@ claude                            # log in; install the "Claude in Chrome" exten
 4. `claude` → `/publish ready\<name>.mp4` → upload with the settings it gives.
 5. Weekly (Sunday, scheduled): `/analytics` reads your Studio numbers → rules into memory; `/community` drafts the week's post.
 
+## Studio UI (optional, same flow in a browser)
+```powershell
+.\studio.ps1          # http://localhost:8787 ; .\studio.ps1 -Fake plays back a stub run without credits
+```
+1 Scout: paste Shorts links → verdict cards → "Make topics". 2 Topics: read each script / teleprompter, play the Telugu
+preview, "I'll record this". 3 Record: upload the recording → it lands in `inbox\` and `/edit` starts. 4 Run: stages,
+the 6 specialists + reviewer per round (grey → working → ✓/✗ with each one's verdict and time), live log, SUCCESS/FAILED.
+5 Ready: play the video, thumbnails, metadata, verify result. Everything is the same `claude -p` the watcher runs, with
+`--output-format stream-json` so the page sees each tool call; runs are kept in `.state\studio\jobs\`. One job at a time.
+
 Workflow smoke test (no paid b-roll, no production-script approval):
 
 ```powershell
