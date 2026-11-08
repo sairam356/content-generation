@@ -19,6 +19,9 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Streamin
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / ".state" / "studio"
 JOBS_DIR = STATE / "jobs"
+# Claude Code keeps the session transcript here; the slug is the cwd with every non-alphanumeric char replaced by '-'
+SESSION_DIR = Path(os.environ.get("STUDIO_SESSION_DIR")
+                   or Path.home() / ".claude" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(ROOT)))
 for d in (ROOT / "inbox", ROOT / "ready", ROOT / "topics", JOBS_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
@@ -71,6 +74,8 @@ class Job:
         self.agents: dict[str, dict] = {}  # "taste r1" -> {...}
         self.tools: dict[str, dict] = {}   # tool_use_id -> {name, agent, started}
         self.async_agents: dict[str, str] = {}  # tool_use_id of a background Agent -> agent key
+        self.session_id = ""
+        self.session_offset = 0
         self.log: deque[str] = deque(maxlen=4000)
         self.events: list[dict] = []
         self.result_text = ""
@@ -128,9 +133,11 @@ class Job:
         t = d.get("type")
         if t == "system":
             if d.get("subtype") == "init":
-                self.logline(f"[claude] session {d.get('session_id', '')[:8]} model={d.get('model', '')}")
+                self.session_id = d.get("session_id", "")
+                self.logline(f"[claude] session {self.session_id[:8]} model={d.get('model', '')}")
             return
         if t == "result":
+            self.poll_session_file()
             res = (d.get("result") or "").strip()
             self.result_text = (res if len(res) > 60 else (self.last_text or res))[:20000]
             if d.get("is_error") or d.get("subtype") not in (None, "success"):
@@ -193,6 +200,36 @@ class Job:
                 self.on_stage_hint(stage)
                 break
         self.logline(f"[{name}] {text[:300]}")
+
+    def poll_session_file(self) -> None:
+        """Background Agents report back as <task-notification> user turns. `claude -p` does not print those on
+        stdout, so read them from the session transcript (~/.claude/projects/<cwd-slug>/<session>.jsonl)."""
+        if not self.session_id or not self.async_agents:
+            return
+        f = SESSION_DIR / f"{self.session_id}.jsonl"
+        if not f.exists():
+            return
+        try:
+            with f.open("rb") as fh:
+                fh.seek(self.session_offset)
+                chunk = fh.read()
+                self.session_offset += len(chunk)
+        except OSError:
+            return
+        for raw in chunk.decode("utf-8", "replace").splitlines():
+            if "<task-notification>" not in raw:
+                continue
+            try:
+                d = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if d.get("type") != "user":
+                continue
+            content = (d.get("message") or {}).get("content")
+            if isinstance(content, list):
+                content = "\n".join(x.get("text", "") for x in content if isinstance(x, dict))
+            if isinstance(content, str) and "<task-notification>" in content:
+                self.on_task_notification(content)
 
     def on_task_notification(self, text: str) -> None:
         def tag(name: str) -> str:
@@ -336,6 +373,7 @@ class Runner:
             if _now() - last_save > 10:
                 self.save(job); last_save = _now()
         code = proc.wait()
+        job.poll_session_file()
         job.ended = _now()
         for s, v in job.stages.items():
             if v == "running":

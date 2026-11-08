@@ -41,7 +41,8 @@ def panel(rnd, fail_one=False):
          f"VERDICT: {'SHIP WITH OWNER NOTES' if rnd == 2 else 'FIX FIRST'} - gates: 11/11 PASS" if rnd == 2 else "VERDICT: FIX FIRST - gates 9/11; actions: regen bg 4, 7; move hook start", secs=1.5)
 
 
-ev({"type": "system", "subtype": "init", "session_id": uuid.uuid4().hex, "model": "claude-opus-5-5", "tools": ["Bash", "Agent"]})
+SESSION = uuid.uuid4().hex
+ev({"type": "system", "subtype": "init", "session_id": SESSION, "model": "claude-opus-5-5", "tools": ["Bash", "Agent"]})
 text(f"Running {prompt}")
 if kind == "edit":
     tool("Read", {"file_path": "memory/style.md"}, "ok")
@@ -72,10 +73,20 @@ elif kind == "scout":
         launched.append((tid, aid, a, verdict))
     text("While the agents run, I'm reading the policy file myself.")
     time.sleep(SP * 2)
+    # the parent only sees the notifications in its session transcript, never on stdout; emit a result per turn
+    ev({"type": "result", "subtype": "success", "is_error": False, "result": "waiting", "num_turns": 9, "total_cost_usd": 0.0})
+    sess_dir = os.environ.get("STUDIO_SESSION_DIR")
     for tid, aid, a, verdict in launched:
-        ev({"type": "user", "message": {"role": "user", "content": f"<task-notification>\n<task-id>{aid}</task-id>\n<tool-use-id>{tid}</tool-use-id>"
-            f"\n<status>completed</status>\n<summary>Agent \"{a} r1 scout\" finished</summary>\n<result>{verdict}\n\nDetails...</result>\n</task-notification>"}})
+        note = (f"<task-notification>\n<task-id>{aid}</task-id>\n<tool-use-id>{tid}</tool-use-id>\n<status>completed</status>"
+                f"\n<summary>Agent \"{a} r1 scout\" finished</summary>\n<result>{verdict}\n\nDetails...</result>\n</task-notification>")
+        line = {"type": "user", "message": {"role": "user", "content": note}}
+        if sess_dir:
+            with open(os.path.join(sess_dir, SESSION + ".jsonl"), "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(line) + "\n")
+        else:
+            ev(line)
         time.sleep(SP)
+        ev({"type": "result", "subtype": "success", "is_error": False, "result": "turn", "num_turns": 1, "total_cost_usd": 0.0})
     text("WHAT: a 40 s facts Short about pressure cookers.\nWHY VIRAL: a number in the hook.\nDO WE MAKE IT? yes-with-changes: our angle = the 1679 Papin story.\nCOMPLIANCE: no flags.\nNext: /script pressure cooker whistle 120°")
 elif kind == "topics":
     tool("Bash", {"command": "python -m pipeline channels"}, ".state/channels.json", secs=2)
